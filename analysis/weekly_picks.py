@@ -2,6 +2,7 @@ import os
 
 import pandas as pd
 import requests
+import streamlit as st
 from dotenv import load_dotenv
 
 from analysis.nfl_results import (
@@ -11,13 +12,33 @@ from analysis.nfl_results import (
 
 load_dotenv()
 
-API_KEY = os.getenv("ODDS_API_KEY")
+def get_api_key():
 
-if not API_KEY:
-    raise ValueError(
-        "ODDS_API_KEY was not found "
-        "in your .env file."
+    # Local development
+    api_key = os.getenv(
+        "ODDS_API_KEY"
     )
+
+    if api_key:
+        return api_key
+
+    # Streamlit Community Cloud
+    try:
+        api_key = st.secrets[
+            "ODDS_API_KEY"
+        ]
+
+        if api_key:
+            return api_key
+
+    except (KeyError, FileNotFoundError):
+        pass
+
+    raise ValueError(
+        "ODDS_API_KEY was not found."
+    )
+
+API_KEY = get_api_key()
 
 def get_nfl_odds(
     commence_time_from,
