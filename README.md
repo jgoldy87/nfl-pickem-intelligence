@@ -1,6 +1,6 @@
 # NFL Pick'em Intelligence Dashboard
 
-An interactive NFL Pick'em Confidence Mode analytics dashboard built with Python and Streamlit.
+An interactive NFL Pick'em Confidence Mode analytics dashboard built with Vibe Coding, Python and Streamlit.
 
 The project combines sportsbook market data, weekly confidence picks, NFL game results, and historical player performance to help players make more informed weekly selections and analyze how they perform throughout the season.
 
