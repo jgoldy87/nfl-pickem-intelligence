@@ -1,0 +1,5 @@
+season,week,game_id,away_team,home_team,winner,status
+2026,1,2026_W1_DAL_PHI,DAL,PHI,PHI,final
+2026,1,2026_W1_KC_LAC,KC,LAC,LAC,final
+2026,1,2026_W1_TB_ATL,TB,ATL,TB,final
+2026,1,2026_W1_CIN_CLE,CIN,CLE,,scheduled

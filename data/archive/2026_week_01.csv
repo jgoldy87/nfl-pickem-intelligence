@@ -1,0 +1,5 @@
+season,week,player,game_id,away_team,home_team,picked_team,confidence
+2026,1,James,2026_01_NE_SEA,NE,SEA,SEA,14
+2026,1,James,2026_01_SF_LA,SF,LA,SF,10
+2026,1,Mike,2026_01_NE_SEA,NE,SEA,SEA,1
+2026,1,Mike,2026_01_SF_LA,SF,LA,SF,2
