@@ -204,14 +204,32 @@ if games:
         )
 
         st.caption(
-            "Top = most confident • "
-            "Bottom = least confident"
+            "Top = lowest confidence • "
+            "Bottom = highest confidence"
         )
 
-        selected_teams = [
-            item["pick"]
-            for item in weekly_picks
-        ]
+        pick_labels = {}
+
+        for item in weekly_picks:
+            game = item["game"]
+            pick = item["pick"]
+
+            away_team = game["away_team"]
+            home_team = game["home_team"]
+
+            if pick == away_team:
+                opponent = home_team
+            else:
+                opponent = away_team
+
+            label = f"{pick} over {opponent}"
+
+            pick_labels[label] = pick
+
+
+        selected_teams = list(
+            pick_labels.keys()
+        )
 
         ranked_teams = sort_items(
             selected_teams,
@@ -219,13 +237,12 @@ if games:
         )
 
         confidence_lookup = {
-            team: confidence
-            for team, confidence in zip(
+            pick_labels[label]: confidence
+            for label, confidence in zip(
                 ranked_teams,
                 range(
-                    len(ranked_teams),
-                    0,
-                    -1,
+                    1,
+                    len(ranked_teams) + 1,
                 ),
             )
         }
@@ -248,17 +265,16 @@ if games:
 
         st.write("Current confidence order:")
 
-        for confidence, team in zip(
+        for confidence, label in zip(
             range(
-                len(ranked_teams),
-                0,
-                -1,
+                1,
+                len(ranked_teams) + 1,
             ),
             ranked_teams,
         ):
 
             st.write(
-                f"**{confidence}.** {team}"
+                f"**{confidence}.** {label}"
             )
         
         if st.button(
