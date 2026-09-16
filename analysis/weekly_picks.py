@@ -97,8 +97,11 @@ def get_week_odds_window(
     )
 
     commence_time_to = (
-        last_date.strftime(
-            "%Y-%m-%dT23:59:59Z"
+        (
+            last_date
+            + pd.Timedelta(days=1)
+        ).strftime(
+            "%Y-%m-%dT06:00:00Z"
         )
     )
 
