@@ -1,5 +1,6 @@
 from pathlib import Path
 from analysis.nfl_results import fetch_week_results
+from analysis.database import load_picks
 
 import pandas as pd
 
@@ -632,6 +633,156 @@ def load_game_results(filepath):
 
     return df
 
+def build_results_from_picks(picks):
+    """
+    Join a DataFrame of player picks to
+    automatically fetched NFL results.
+    """
+
+    if picks.empty:
+        return picks.copy()
+
+    picks = picks.copy()
+
+    season_values = picks["season"].unique()
+    week_values = picks["week"].unique()
+
+    if len(season_values) != 1:
+        raise ValueError(
+            "Picks must contain exactly "
+            "one season."
+        )
+
+    if len(week_values) != 1:
+        raise ValueError(
+            "Picks must contain exactly "
+            "one week."
+        )
+
+    season = int(
+        season_values[0]
+    )
+
+    week = int(
+        week_values[0]
+    )
+
+    results = fetch_week_results(
+        season=season,
+        week=week,
+    )
+
+    # Add schedule information to database
+    # picks because Supabase stores only the
+    # essential pick fields.
+    schedule_columns = [
+        "season",
+        "week",
+        "game_id",
+        "away_team",
+        "home_team",
+        "winner",
+        "status",
+        "game_completed",
+    ]
+
+    merged = picks.merge(
+        results[schedule_columns],
+        on=[
+            "season",
+            "week",
+            "game_id",
+        ],
+        how="left",
+        validate="many_to_one",
+    )
+
+    unmatched_games = (
+        merged["status"].isna()
+    )
+
+    if unmatched_games.any():
+        missing = (
+            merged.loc[
+                unmatched_games,
+                "game_id",
+            ]
+            .unique()
+            .tolist()
+        )
+
+        raise ValueError(
+            "Could not match these pick games "
+            "to NFL schedule data:\n"
+            f"{missing}"
+        )
+
+    team_columns = [
+        "away_team",
+        "home_team",
+        "picked_team",
+    ]
+
+    for column in team_columns:
+        merged[column] = (
+            merged[column]
+            .astype(str)
+            .str.strip()
+            .str.upper()
+        )
+
+    merged["winner"] = (
+        merged["winner"]
+        .astype("string")
+        .str.strip()
+        .str.upper()
+    )
+
+    merged["pick_correct"] = pd.Series(
+        pd.NA,
+        index=merged.index,
+        dtype="boolean",
+    )
+
+    completed = (
+        merged["game_completed"] == True
+    )
+
+    merged.loc[
+        completed,
+        "pick_correct",
+    ] = (
+        merged.loc[
+            completed,
+            "picked_team",
+        ]
+        == merged.loc[
+            completed,
+            "winner",
+        ]
+    )
+
+    merged["points_earned"] = pd.Series(
+        pd.NA,
+        index=merged.index,
+        dtype="Int64",
+    )
+
+    merged.loc[
+        completed,
+        "points_earned",
+    ] = merged.loc[
+        completed,
+        "confidence",
+    ].where(
+        merged.loc[
+            completed,
+            "pick_correct",
+        ],
+        0,
+    )
+
+    return merged
 
 def build_week_results(
     picks_filepath,
@@ -826,6 +977,80 @@ def build_master_results(
 
     return master
 
+def build_master_results_from_supabase():
+    """
+    Build the complete master results table
+    from picks stored in Supabase.
+    """
+
+    picks = load_picks()
+
+    if picks.empty:
+        raise ValueError(
+            "No picks were found in Supabase."
+        )
+
+    # Translate database naming into the
+    # naming expected by the analytics code.
+    picks = picks.rename(
+        columns={
+            "pick": "picked_team",
+        }
+    )
+
+    pick_columns = [
+        "season",
+        "week",
+        "player",
+        "game_id",
+        "picked_team",
+        "confidence",
+    ]
+
+    picks = picks[
+        pick_columns
+    ].copy()
+
+    weekly_results = []
+
+    week_groups = picks.groupby(
+        [
+            "season",
+            "week",
+        ],
+        sort=True,
+    )
+
+    for (
+        season,
+        week,
+    ), week_picks in week_groups:
+
+        week_results = (
+            build_results_from_picks(
+                week_picks
+            )
+        )
+
+        weekly_results.append(
+            week_results
+        )
+
+    master = pd.concat(
+        weekly_results,
+        ignore_index=True,
+    )
+
+    master = master.sort_values(
+        [
+            "season",
+            "week",
+            "player",
+            "game_id",
+        ]
+    )
+
+    return master
 
 def save_master_results(
     output_filepath="data/picks_results.csv",
@@ -835,6 +1060,25 @@ def save_master_results(
     """
 
     master = build_master_results()
+
+    master.to_csv(
+        output_filepath,
+        index=False,
+    )
+
+    return master
+
+def save_master_results_from_supabase(
+    output_filepath="data/picks_results.csv",
+):
+    """
+    Rebuild and save the master results CSV
+    using Supabase as the picks source.
+    """
+
+    master = (
+        build_master_results_from_supabase()
+    )
 
     master.to_csv(
         output_filepath,

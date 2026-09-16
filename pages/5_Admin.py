@@ -1,10 +1,13 @@
 import streamlit as st
-from pathlib import Path
 import pandas as pd
 
 from analysis.data_pipeline import (
-    upsert_pick_rows,
-    save_master_results,
+    save_master_results_from_supabase,
+)
+
+from analysis.database import (
+    load_picks,
+    upsert_picks,
 )
 
 from analysis.nfl_results import (
@@ -40,7 +43,7 @@ if st.button(
     type="primary",
 ):
     try:
-        refreshed = save_master_results()
+        refreshed = save_master_results_from_supabase()
 
         st.success(
             "NFL results refreshed successfully."
@@ -112,22 +115,16 @@ st.write(
     f"{len(schedule)} games found."
 )
 
-
-destination_file = (
-    f"data/picks/"
-    f"{season}_week_{week:02d}.csv"
-)
-
 existing_player_picks = {}
 
-if Path(destination_file).exists():
+try:
 
-    existing_df = pd.read_csv(
-        destination_file
-    )
+    existing_df = load_picks()
 
     player_existing = existing_df[
-        existing_df["player"] == player
+        (existing_df["season"] == season)
+        & (existing_df["week"] == week)
+        & (existing_df["player"] == player)
     ].copy()
 
     for _, row in player_existing.iterrows():
@@ -135,13 +132,20 @@ if Path(destination_file).exists():
         existing_player_picks[
             row["game_id"]
         ] = {
-            "picked_team": row[
-                "picked_team"
-            ],
+            "picked_team": row["pick"],
             "confidence": int(
                 row["confidence"]
             ),
         }
+
+except Exception as error:
+
+    st.error(
+        f"Could not load existing picks: "
+        f"{error}"
+    )
+
+    st.stop()
 
 submitted_picks = []
 
@@ -206,6 +210,9 @@ with st.form("pick_entry_form"):
                 index=pick_index,
                 key=(
                     f"pick_"
+                    f"{season}_"
+                    f"{week}_"
+                    f"{player}_"
                     f"{game['game_id']}"
                 ),
             )
@@ -240,6 +247,9 @@ with st.form("pick_entry_form"):
                 index=confidence_index,
                 key=(
                     f"confidence_"
+                    f"{season}_"
+                    f"{week}_"
+                    f"{player}_"
                     f"{game['game_id']}"
                 ),
             )
@@ -368,20 +378,18 @@ if submitted:
 
         try:
 
-            updated_picks = upsert_pick_rows(
-                new_picks=entered_df,
-                destination_filepath=(
-                    destination_file
-                ),
+            saved_picks = upsert_picks(
+                entered_df
             )
 
             st.success(
-                "Picks saved successfully."
+                "Picks saved successfully "
+                "to Supabase."
             )
 
             st.write(
-                f"Weekly file now contains "
-                f"{len(updated_picks)} picks."
+                f"{len(saved_picks)} picks "
+                f"were saved."
             )
 
         except Exception as error:
