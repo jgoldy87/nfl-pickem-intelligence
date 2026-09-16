@@ -1,6 +1,6 @@
 # NFL Pick'em Intelligence Dashboard
 
-An interactive NFL Pick'em Confidence Mode analytics dashboard built with Vibe Coding, Python and Streamlit.
+An interactive NFL Pick'em Confidence Mode analytics dashboard built with Vibe Coding, Python, Streamlit, and Supabase.
 
 The project combines sportsbook market data, weekly confidence picks, NFL game results, and historical player performance to help players make more informed weekly selections and analyze how they perform throughout the season.
 
@@ -75,36 +75,48 @@ The Admin workflow supports:
 1. Selecting the NFL season and week
 2. Selecting a player
 3. Loading the week's NFL schedule
-4. Entering or editing picks and confidence values
-5. Validating picks
-6. Saving weekly picks
-7. Refreshing NFL game results
-8. Rebuilding the analytics dataset
+4. Loading existing picks from persistent storage
+5. Entering or editing picks and confidence values
+6. Validating picks and confidence assignments
+7. Saving picks to Supabase
+8. Refreshing NFL game results
+9. Rebuilding the analytics dataset
 
 ## 📊 Data Pipeline
 
-The application separates raw player picks from generated results and analytics.
+Supabase provides persistent storage for raw player picks, allowing the deployed Streamlit application to retain data across sessions and deployments.
 
 ```text
-Weekly Player Picks
-        ↓
+Streamlit Admin
+      ↓
+Enter / Edit Picks
+      ↓
+Supabase
+      ↓
+Persistent Pick Data
+      ↓
 NFL Schedule & Results
-        ↓
+      ↓
 Data Pipeline
-        ↓
+      ↓
 Master Picks/Results Dataset
-        ↓
+      ↓
 Analytics Engine
-        ↓
-Streamlit Dashboard
+      ↓
+Standings / Player Explorer / Pool Insights
 ```
 
-Weekly pick files serve as the permanent source data, while the master results dataset can be rebuilt as NFL results become available.
+Supabase serves as the **source of truth** for raw player picks. NFL results are fetched and merged with those picks to calculate pick accuracy and confidence points.
+
+The master analytics dataset can be rebuilt whenever updated NFL results become available.
+
+Historical weekly CSV files are retained as backup/archive data rather than serving as the live application's primary storage.
 
 ## 🛠️ Built With
 
 - Python
 - Streamlit
+- Supabase / PostgreSQL
 - pandas
 - nflreadpy / nflverse
 - The Odds API
@@ -112,6 +124,7 @@ Weekly pick files serve as the permanent source data, while the master results d
 - python-dotenv
 - streamlit-sortables
 - Git / GitHub
+- Streamlit Community Cloud
 
 ## 📁 Project Structure
 
@@ -119,6 +132,7 @@ Weekly pick files serve as the permanent source data, while the master results d
 NFL Confidence Assistant/
 │
 ├── analysis/
+│   ├── database.py
 │   ├── data_pipeline.py
 │   ├── nfl_results.py
 │   ├── pickem_analyzer.py
@@ -128,6 +142,7 @@ NFL Confidence Assistant/
 ├── data/
 │   ├── picks/
 │   ├── templates/
+│   ├── archive/
 │   └── picks_results.csv
 │
 ├── pages/
@@ -137,10 +152,28 @@ NFL Confidence Assistant/
 │   ├── 4_Pool_Insights.py
 │   └── 5_Admin.py
 │
+├── tests/
+│   ├── test_database.py
+│   ├── test_supabase_results.py
+│   ├── test_supabase_master.py
+│   └── migrate_week1_to_supabase.py
+│
 ├── app.py
 ├── requirements.txt
 └── README.md
 ```
+
+## 🔐 Persistent Storage
+
+Player picks are stored in a Supabase PostgreSQL database using a unique combination of:
+
+```text
+season + week + player + game_id
+```
+
+This allows the Admin interface to safely insert new picks or update existing selections without creating duplicate player/game records.
+
+Database credentials and API keys are managed through environment variables locally and Streamlit Secrets in production. Sensitive credentials are excluded from the Git repository.
 
 ## 🎯 Project Goals
 
@@ -151,11 +184,14 @@ Rather than simply tracking wins and losses, the dashboard examines **how confid
 The project also serves as a practical demonstration of:
 
 - API integration
+- Persistent cloud database integration
 - Data ingestion and validation
 - Data transformation with pandas
 - Automated sports-data pipelines
 - Interactive dashboard development
 - Session-state management
 - Analytics design
+- Secure configuration and secrets management
 - Modular Python application architecture
+- Database-backed application development
 - Git-based deployment workflows
