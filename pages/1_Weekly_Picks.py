@@ -3,6 +3,7 @@ import streamlit as st
 from analysis.weekly_picks import (
     get_week_nfl_odds,
     rank_live_picks,
+    summarize_pick_profile,
 )
 
 from streamlit_sortables import sort_items
@@ -195,6 +196,47 @@ if games:
     )
 
     if completed_picks == len(games):
+
+        # Pick profile summary
+        pick_profile = summarize_pick_profile(
+            weekly_picks
+        )
+
+        st.subheader("Your Pick Summary")
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric(
+                "Home Teams",
+                pick_profile["home_picks"],
+            )
+
+        with col2:
+            st.metric(
+                "Away Teams",
+                pick_profile["away_picks"],
+            )
+
+        with col3:
+            st.metric(
+                "Favorites",
+                pick_profile["favorite_picks"],
+            )
+
+        with col4:
+            st.metric(
+                "Underdogs",
+                pick_profile["underdog_picks"],
+            )
+
+        if pick_profile["pickem_picks"] > 0:
+            st.caption(
+                f"Pick'em games selected: "
+                f"{pick_profile['pickem_picks']}"
+            )
+
+        st.divider()
 
         st.subheader("Rank Your Picks")
 

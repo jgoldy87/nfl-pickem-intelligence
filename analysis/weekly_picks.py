@@ -198,6 +198,57 @@ def get_consensus_probabilities(game):
 
     return away_consensus, home_consensus
 
+def summarize_pick_profile(weekly_picks):
+    summary = {
+        "home_picks": 0,
+        "away_picks": 0,
+        "favorite_picks": 0,
+        "underdog_picks": 0,
+        "pickem_picks": 0,
+    }
+
+    for item in weekly_picks:
+        game = item["game"]
+        pick = item["pick"]
+
+        away_team = game["away_team"]
+        home_team = game["home_team"]
+
+        # Home vs. away
+        if pick == home_team:
+            summary["home_picks"] += 1
+        elif pick == away_team:
+            summary["away_picks"] += 1
+
+        # Favorite vs. underdog
+        away_probability, home_probability = (
+            get_consensus_probabilities(game)
+        )
+
+        # Skip market classification if odds are unavailable.
+        if (
+            away_probability is None
+            or home_probability is None
+        ):
+            continue
+
+        if away_probability > home_probability:
+            favorite = away_team
+            underdog = home_team
+        elif home_probability > away_probability:
+            favorite = home_team
+            underdog = away_team
+        else:
+            summary["pickem_picks"] += 1
+            continue
+
+        if pick == favorite:
+            summary["favorite_picks"] += 1
+        elif pick == underdog:
+            summary["underdog_picks"] += 1
+
+    return summary
+
 def confidence_tier(probability):
     """
     Add a descriptive label to each pick.
