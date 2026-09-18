@@ -1,14 +1,11 @@
 import streamlit as st
 
-from analysis.pickem_analyzer import (
-    load_results,
+from analysis.data_pipeline import (
+    build_master_results_from_supabase,
 )
 from analysis.player_explorer import (
     get_player_explorer,
 )
-
-
-DATA_FILE = "data/picks_results.csv"
 
 
 st.title("NFL Pick'em Player Explorer")
@@ -19,9 +16,7 @@ st.write(
 )
 
 try:
-    df = load_results(
-        DATA_FILE
-    )
+    df = build_master_results_from_supabase()
 
 except Exception as error:
     st.error(

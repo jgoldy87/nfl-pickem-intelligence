@@ -782,6 +782,20 @@ def build_results_from_picks(picks):
         0,
     )
 
+    merged["picked_home"] = (
+        merged["picked_team"]
+        == merged["home_team"]
+    )
+
+    merged["pick_location"] = (
+        merged["picked_home"].map(
+            {
+                True: "Home",
+                False: "Away",
+            }
+        )
+    )
+
     return merged
 
 def build_week_results(

@@ -1,7 +1,7 @@
 import streamlit as st
+import pandas as pd
 
 from analysis.pickem_analyzer import (
-    load_results,
     pool_game_results,
     lone_wolf_picks,
     lone_wolf_performance,
@@ -10,8 +10,14 @@ from analysis.pickem_analyzer import (
     player_agreement,
 )
 
+from analysis.data_pipeline import (
+    build_master_results_from_supabase,
+)
 
-DATA_FILE = "data/picks_results.csv"
+from analysis.market_performance import (
+    get_market_performance,
+    summarize_team_type_records,
+)
 
 
 st.title("Pool Insights")
@@ -23,9 +29,7 @@ st.write(
 
 
 try:
-    df = load_results(
-        DATA_FILE
-    )
+    df = build_master_results_from_supabase()
 
 except Exception as error:
     st.error(
@@ -98,11 +102,17 @@ game_results = pool_game_results(
     filtered_df
 )
 
-game_tab, behavior_tab, comparison_tab = st.tabs(
+(
+    game_tab,
+    behavior_tab,
+    comparison_tab,
+    nfl_trends_tab,
+) = st.tabs(
     [
         "Game Insights",
         "Pick Behavior",
         "Player Comparisons",
+        "NFL Trends",
     ]
 )
 
@@ -601,3 +611,142 @@ with comparison_tab:
                 f"{player_b} Wins",
                 row[f"{player_b} Wins"],
             )
+
+with nfl_trends_tab:
+
+    st.subheader("NFL Team Type Records")
+
+    st.caption(
+        "Regular-season results for the "
+        f"{selected_season} NFL season."
+    )
+
+    try:
+        market_results = get_market_performance(
+            selected_season
+        )
+
+        regular_season_results = (
+            market_results[
+                market_results["game_type"]
+                == "REG"
+            ].copy()
+        )
+
+        team_type_records = (
+            summarize_team_type_records(
+                regular_season_results
+            )
+        )
+
+        completed_games = len(
+            regular_season_results
+        )
+
+        st.caption(
+            f"{completed_games} completed games included."
+        )
+
+        home = team_type_records[
+            "home_teams"
+        ]
+
+        away = team_type_records[
+            "away_teams"
+        ]
+
+        favorites = team_type_records[
+            "favorites"
+        ]
+
+        underdogs = team_type_records[
+            "underdogs"
+        ]
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric(
+            "Home Teams",
+            f"{home['wins']}-{home['losses']}",
+            f"{home['win_percentage']:.1f}%",
+        )
+
+        col2.metric(
+            "Away Teams",
+            f"{away['wins']}-{away['losses']}",
+            f"{away['win_percentage']:.1f}%",
+        )
+
+        col3.metric(
+            "Favorites",
+            f"{favorites['wins']}-{favorites['losses']}",
+            f"{favorites['win_percentage']:.1f}%",
+        )
+
+        col4.metric(
+            "Underdogs",
+            f"{underdogs['wins']}-{underdogs['losses']}",
+            f"{underdogs['win_percentage']:.1f}%",
+        )
+
+        st.markdown("#### Home / Away Breakdown")
+
+        home_favorites = team_type_records[
+            "home_favorites"
+        ]
+
+        away_favorites = team_type_records[
+            "away_favorites"
+        ]
+
+        home_underdogs = team_type_records[
+            "home_underdogs"
+        ]
+
+        away_underdogs = team_type_records[
+            "away_underdogs"
+        ]
+
+        breakdown = pd.DataFrame(
+            {
+                "Type": [
+                    "Favorites",
+                    "Underdogs",
+                ],
+                "Home": [
+                    (
+                        f"{home_favorites['wins']}-"
+                        f"{home_favorites['losses']} "
+                        f"({home_favorites['win_percentage']:.1f}%)"
+                    ),
+                    (
+                        f"{home_underdogs['wins']}-"
+                        f"{home_underdogs['losses']} "
+                        f"({home_underdogs['win_percentage']:.1f}%)"
+                    ),
+                ],
+                "Away": [
+                    (
+                        f"{away_favorites['wins']}-"
+                        f"{away_favorites['losses']} "
+                        f"({away_favorites['win_percentage']:.1f}%)"
+                    ),
+                    (
+                        f"{away_underdogs['wins']}-"
+                        f"{away_underdogs['losses']} "
+                        f"({away_underdogs['win_percentage']:.1f}%)"
+                    ),
+                ],
+            }
+        )
+
+        st.dataframe(
+            breakdown,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    except Exception as error:
+        st.error(
+            f"Could not load NFL Trends: {error}"
+        )

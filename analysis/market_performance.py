@@ -317,3 +317,114 @@ def summarize_probability_buckets(
     )
 
     return summary
+
+def summarize_team_type_records(results_df):
+    categories = {
+        "home_teams": {
+            "wins": 0,
+            "losses": 0,
+        },
+        "away_teams": {
+            "wins": 0,
+            "losses": 0,
+        },
+        "favorites": {
+            "wins": 0,
+            "losses": 0,
+        },
+        "underdogs": {
+            "wins": 0,
+            "losses": 0,
+        },
+        "home_favorites": {
+            "wins": 0,
+            "losses": 0,
+        },
+        "away_favorites": {
+            "wins": 0,
+            "losses": 0,
+        },
+        "home_underdogs": {
+            "wins": 0,
+            "losses": 0,
+        },
+        "away_underdogs": {
+            "wins": 0,
+            "losses": 0,
+        },
+    }
+
+    for _, game in results_df.iterrows():
+        away_team = game["away_team"]
+        home_team = game["home_team"]
+        winner = game["winner"]
+
+        away_probability = game["away_probability"]
+        home_probability = game["home_probability"]
+
+        # Skip ties.
+        if winner not in [away_team, home_team]:
+            continue
+
+        home_won = winner == home_team
+        away_won = winner == away_team
+
+        # Home / Away
+        if home_won:
+            categories["home_teams"]["wins"] += 1
+            categories["away_teams"]["losses"] += 1
+        elif away_won:
+            categories["away_teams"]["wins"] += 1
+            categories["home_teams"]["losses"] += 1
+
+        # Skip favorite/underdog classification
+        # if the game was a true market pick'em.
+        if home_probability == away_probability:
+            continue
+
+        home_is_favorite = (
+            home_probability > away_probability
+        )
+
+        if home_is_favorite:
+            favorite_won = home_won
+
+            if favorite_won:
+                categories["favorites"]["wins"] += 1
+                categories["underdogs"]["losses"] += 1
+                categories["home_favorites"]["wins"] += 1
+                categories["away_underdogs"]["losses"] += 1
+            else:
+                categories["favorites"]["losses"] += 1
+                categories["underdogs"]["wins"] += 1
+                categories["home_favorites"]["losses"] += 1
+                categories["away_underdogs"]["wins"] += 1
+
+        else:
+            favorite_won = away_won
+
+            if favorite_won:
+                categories["favorites"]["wins"] += 1
+                categories["underdogs"]["losses"] += 1
+                categories["away_favorites"]["wins"] += 1
+                categories["home_underdogs"]["losses"] += 1
+            else:
+                categories["favorites"]["losses"] += 1
+                categories["underdogs"]["wins"] += 1
+                categories["away_favorites"]["losses"] += 1
+                categories["home_underdogs"]["wins"] += 1
+
+    for record in categories.values():
+        games = record["wins"] + record["losses"]
+
+        record["games"] = games
+
+        if games > 0:
+            record["win_percentage"] = round(
+                record["wins"] / games * 100,
+                1,
+            )
+        else:
+            record["win_percentage"] = 0.0
+
+    return categories

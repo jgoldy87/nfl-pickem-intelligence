@@ -1,13 +1,14 @@
 import streamlit as st
 
 from analysis.pickem_analyzer import (
-    load_results,
     overall_standings,
     weekly_results,
 )
 
+from analysis.data_pipeline import (
+    build_master_results_from_supabase,
+)
 
-DATA_FILE = "data/picks_results.csv"
 
 
 st.title("Standings")
@@ -23,20 +24,11 @@ st.write(
 # --------------------------------------------------
 
 try:
-    df = load_results(
-        DATA_FILE
-    )
+    df = build_master_results_from_supabase()
 
 except Exception as error:
     st.error(
         f"Could not load results: {error}"
-    )
-    st.stop()
-
-
-if df.empty:
-    st.info(
-        "No pick results are available yet."
     )
     st.stop()
 
