@@ -1,10 +1,6 @@
 import streamlit as st
 import pandas as pd
 
-from analysis.data_pipeline import (
-    save_master_results_from_supabase,
-)
-
 from analysis.database import (
     load_picks,
     upsert_picks,
@@ -37,28 +33,6 @@ st.write(
     "Fetch the latest NFL results and rebuild "
     "the master analytics dataset."
 )
-
-if st.button(
-    "Refresh NFL Results",
-    type="primary",
-):
-    try:
-        refreshed = save_master_results_from_supabase()
-
-        st.success(
-            "NFL results refreshed successfully."
-        )
-
-        st.write(
-            f"{len(refreshed)} pick records "
-            f"are now in the master dataset."
-        )
-
-    except Exception as error:
-        st.error(
-            f"Could not refresh NFL results: "
-            f"{error}"
-        )
 
 st.divider()
 

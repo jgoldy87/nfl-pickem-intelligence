@@ -413,6 +413,19 @@ with behavior_tab:
             }
         )
 
+        display_lone_wolves = display_lone_wolves.sort_values(
+            by=[
+                "Week",
+                "Confidence",
+                "Matchup",
+            ],
+            ascending=[
+                False,
+                False,
+                True,
+            ],
+        )
+
         st.dataframe(
             display_lone_wolves,
             use_container_width=True,
@@ -436,6 +449,36 @@ with behavior_tab:
         )
 
     else:
+
+        unanimous_win_pct = (
+            unanimous["Correct"].mean()
+            * 100
+        )
+
+        st.write(
+            "Unanimous picks:",
+            len(unanimous),
+        )
+
+        st.write(
+            "Correct unanimous picks:",
+            unanimous["Correct"].sum(),
+        )
+
+        if selected_view == "Full Season":
+            unanimous_message = (
+                "When all players agree, we are right "
+                f"{unanimous_win_pct:.1f}% of the time this season."
+            )
+
+        else:
+            unanimous_message = (
+                "When all players agree, we are right "
+                f"{unanimous_win_pct:.1f}% of the time "
+                f"in {selected_view}."
+            )
+
+        st.info(unanimous_message)
 
         display_unanimous = unanimous.copy()
 
@@ -479,6 +522,19 @@ with behavior_tab:
                     "Avg_Confidence": "Avg Confidence",
                 }
             )
+        )
+
+        display_unanimous = display_unanimous.sort_values(
+            by=[
+                "Week",
+                "Total Confidence",
+                "Matchup",
+            ],
+            ascending=[
+                False,
+                False,
+                True,
+            ],
         )
 
         st.dataframe(
