@@ -7,6 +7,8 @@ from analysis.pickem_analyzer import (
     lone_wolf_performance,
     unanimous_picks,
     collective_disasters,
+    collective_triumphs,
+    pool_burners,
     player_agreement,
 )
 
@@ -21,6 +23,16 @@ from analysis.market_performance import (
 
 
 st.title("Pool Insights")
+
+left_col, image_col, right_col = st.columns(
+    [2, 2, 2]
+)
+
+with image_col:
+    st.image(
+        "assets/pool_insights.png",
+        use_container_width=True,
+    )
 
 st.write(
     "Analyze how the entire pool performed "
@@ -118,136 +130,59 @@ game_results = pool_game_results(
 
 with game_tab:
 
-    st.subheader("Hardest Games for the Pool")
-
-
-    if game_results.empty:
-
-        st.info(
-            "No completed pool results are "
-            "available yet."
-        )
-
-    else:
-
-        hardest_games = (
-            game_results
-            .sort_values(
-                by=[
-                    "Pool_Accuracy",
-                    "Avg_Confidence",
-                ],
-                ascending=[
-                    True,
-                    False,
-                ],
-            )
-            .copy()
-        )
-
-        hardest_games["Matchup"] = (
-            hardest_games["away_team"]
-            + " @ "
-            + hardest_games["home_team"]
-        )
-
-        hardest_games["Pool_Accuracy"] = (
-            hardest_games["Pool_Accuracy"]
-            .map(
-                lambda value: f"{value:.1%}"
-            )
-        )
-
-        display_hardest = hardest_games[
-            [
-                "week",
-                "Matchup",
-                "winner",
-                "Correct",
-                "Incorrect",
-                "Picks",
-                "Pool_Accuracy",
-                "Avg_Confidence",
-            ]
-        ].rename(
-            columns={
-                "week": "Week",
-                "winner": "Winner",
-                "Pool_Accuracy": "Pool Accuracy",
-                "Avg_Confidence": "Avg Confidence",
-            }
-        )
-
-        st.dataframe(
-            display_hardest,
-            use_container_width=True,
-            hide_index=True,
-        )
-
     st.divider()
 
-    st.subheader("Easiest Games for the Pool")
+    st.subheader("Collective Triumphs")
 
 
-    if game_results.empty:
+    triumphs = collective_triumphs(
+        filtered_df
+    )
+
+
+    if triumphs.empty:
 
         st.info(
-            "No completed pool results are "
-            "available yet."
+            "No collective triumphs are available yet."
         )
 
     else:
 
-        easiest_games = (
-            game_results
-            .sort_values(
-                by=[
-                    "Pool_Accuracy",
-                    "Avg_Confidence",
-                ],
-                ascending=[
-                    False,
-                    False,
-                ],
-            )
-            .copy()
-        )
+        display_triumphs = triumphs.copy()
 
-        easiest_games["Matchup"] = (
-            easiest_games["away_team"]
+        display_triumphs["Matchup"] = (
+            display_triumphs["away_team"]
             + " @ "
-            + easiest_games["home_team"]
+            + display_triumphs["home_team"]
         )
 
-        easiest_games["Pool_Accuracy"] = (
-            easiest_games["Pool_Accuracy"]
-            .map(
-                lambda value: f"{value:.1%}"
-            )
+        display_triumphs["Avg_Confidence"] = (
+            display_triumphs["Avg_Confidence"]
+            .round(1)
         )
 
-        display_easiest = easiest_games[
-            [
-                "week",
-                "Matchup",
-                "winner",
-                "Correct",
-                "Incorrect",
-                "Picks",
-                "Pool_Accuracy",
-                "Avg_Confidence",
+        display_triumphs = (
+            display_triumphs[
+                [
+                    "week",
+                    "Matchup",
+                    "Unanimous_Pick",
+                    "Total_Confidence",
+                    "Avg_Confidence",
+                ]
             ]
-        ].rename(
-            columns={
-                "week": "Week",
-                "winner": "Winner",
-                "Pool_Accuracy": "Pool Accuracy",
-                "Avg_Confidence": "Avg Confidence",
-            }
+            .rename(
+                columns={
+                    "week": "Week",
+                    "Unanimous_Pick": "Pool Pick",
+                    "Total_Confidence": "Confidence Earned",
+                    "Avg_Confidence": "Avg Confidence",
+                }
+            )
         )
 
         st.dataframe(
-            display_easiest,
+            display_triumphs,
             use_container_width=True,
             hide_index=True,
         )
@@ -307,6 +242,59 @@ with game_tab:
 
         st.dataframe(
             display_disasters,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    left_col, image_col, right_col = st.columns(
+        [2, 2, 2]
+    )
+
+    with image_col:
+        st.image(
+            "assets/pool_burners.png",
+            use_container_width=True,
+        )
+
+    st.subheader("Pool Burners")
+
+    st.caption(
+        "A Pool Burner occurs when all three players pick against a team and that team wins."
+    )
+
+    burners = pool_burners(
+        filtered_df
+    )
+
+    if burners.empty:
+
+        st.info(
+            "No teams have burned the pool yet."
+        )
+
+    else:
+
+        display_burners = burners.copy()
+
+        display_burners = (
+            display_burners[
+                [
+                    "Team",
+                    "Burns",
+                    "Confidence_Lost",
+                    "Avg_Confidence_Lost",
+                ]
+            ]
+            .rename(
+                columns={
+                    "Confidence_Lost": "Confidence Lost",
+                    "Avg_Confidence_Lost": "Avg Confidence Lost",
+                }
+            )
+        )
+
+        st.dataframe(
+            display_burners,
             use_container_width=True,
             hide_index=True,
         )

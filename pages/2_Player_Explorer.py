@@ -122,68 +122,6 @@ status_col3.metric(
     status["remaining_picks"],
 )
 
-st.subheader("Key Insights")
-
-highest_correct = explorer[
-    "highest_confidence_correct"
-]
-
-highest_miss = explorer[
-    "highest_confidence_miss"
-]
-
-insight_col1, insight_col2 = st.columns(2)
-
-with insight_col1:
-    st.markdown(
-        "#### Highest-Confidence Correct Pick"
-    )
-
-    if highest_correct is None:
-        st.write(
-            "No completed correct picks yet."
-        )
-    else:
-        st.write(
-            f"{highest_correct['team']} vs "
-            f"{highest_correct['opponent']}"
-        )
-
-        st.write(
-            f"Confidence: "
-            f"{highest_correct['confidence']}"
-        )
-
-        st.write(
-            f"Week: "
-            f"{highest_correct['week']}"
-        )
-
-with insight_col2:
-    st.markdown(
-        "#### Highest-Confidence Miss"
-    )
-
-    if highest_miss is None:
-        st.write(
-            "No completed missed picks yet."
-        )
-    else:
-        st.write(
-            f"{highest_miss['team']} vs "
-            f"{highest_miss['opponent']}"
-        )
-
-        st.write(
-            f"Confidence: "
-            f"{highest_miss['confidence']}"
-        )
-
-        st.write(
-            f"Week: "
-            f"{highest_miss['week']}"
-        )
-
 st.subheader("Weekly Results")
 
 weekly = explorer["weekly"]
@@ -193,6 +131,42 @@ if weekly.empty:
         "No completed weekly results yet."
     )
 else:
+
+    weekly = explorer["weekly"].copy()
+
+    weekly["Record"] = (
+        weekly["Correct"].astype(str)
+        + "-"
+        + weekly["Incorrect"].astype(str)
+    )
+
+    weekly["Win %"] = (
+        weekly["Win_Pct"]
+        .map(lambda value: f"{value:.1%}")
+    )
+
+    weekly["Point Efficiency"] = (
+        weekly["Point_Efficiency"]
+        .map(lambda value: f"{value:.1%}")
+    )
+
+    weekly = weekly[
+        [
+            "week",
+            "Record",
+            "Win %",
+            "Confidence_Points",
+            "Confidence_Risked",
+            "Point Efficiency",
+        ]
+    ].rename(
+        columns={
+            "week": "Week",
+            "Confidence_Points": "Points Earned",
+            "Confidence_Risked": "Points Risked",
+        }
+    )
+
     st.dataframe(
         weekly,
         use_container_width=True,
@@ -403,6 +377,16 @@ if confidence.empty:
         "No completed confidence results yet."
     )
 else:
+    confidence = confidence.copy()
+
+    confidence["Win_Pct"] = (
+        confidence["Win_Pct"]
+        .map(
+            lambda value:
+            f"{value:.1%}"
+        )
+    )
+
     st.dataframe(
         confidence,
         use_container_width=True,

@@ -147,6 +147,7 @@ def weekly_results(df):
             Picks=("pick_correct", "count"),
             Correct=("pick_correct", "sum"),
             Confidence_Points=("points_earned", "sum"),
+            Confidence_Risked=("confidence", "sum"),
         )
         .reset_index()
     )
@@ -157,6 +158,11 @@ def weekly_results(df):
 
     weekly["Win_Pct"] = (
         weekly["Correct"] / weekly["Picks"]
+    )
+
+    weekly["Point_Efficiency"] = (
+        weekly["Confidence_Points"]
+        / weekly["Confidence_Risked"]
     )
 
     weekly["Weekly_Rank"] = (
@@ -178,6 +184,8 @@ def weekly_results(df):
             "Picks",
             "Win_Pct",
             "Confidence_Points",
+            "Confidence_Risked",
+            "Point_Efficiency",
             "Weekly_Rank",
         ]
     ]
@@ -778,6 +786,89 @@ def collective_disasters(df):
     )
 
     return disasters.reset_index(
+        drop=True
+    )
+
+def collective_triumphs(df):
+    unanimous = unanimous_picks(
+        df
+    )
+
+    if unanimous.empty:
+        return pd.DataFrame(
+            columns=[
+                "season",
+                "week",
+                "game_id",
+                "away_team",
+                "home_team",
+                "winner",
+                "Unanimous_Pick",
+                "Total_Confidence",
+                "Avg_Confidence",
+            ]
+        )
+
+    triumphs = unanimous[
+        unanimous["Correct"] == True
+    ].copy()
+
+    triumphs = triumphs.sort_values(
+        by="Total_Confidence",
+        ascending=False,
+    )
+
+    return triumphs.reset_index(
+        drop=True
+    )
+
+def pool_burners(df):
+    disasters = collective_disasters(
+        df
+    )
+
+    if disasters.empty:
+        return pd.DataFrame(
+            columns=[
+                "Team",
+                "Burns",
+                "Confidence_Lost",
+                "Avg_Confidence_Lost",
+            ]
+        )
+
+    burners = (
+        disasters.groupby("winner")
+        .agg(
+            Burns=("game_id", "count"),
+            Confidence_Lost=("Total_Confidence", "sum"),
+            Avg_Confidence_Lost=("Total_Confidence", "mean"),
+        )
+        .reset_index()
+        .rename(
+            columns={
+                "winner": "Team",
+            }
+        )
+    )
+
+    burners["Avg_Confidence_Lost"] = (
+        burners["Avg_Confidence_Lost"]
+        .round(1)
+    )
+
+    burners = burners.sort_values(
+        by=[
+            "Burns",
+            "Confidence_Lost",
+        ],
+        ascending=[
+            False,
+            False,
+        ],
+    )
+
+    return burners.reset_index(
         drop=True
     )
 
