@@ -5,6 +5,7 @@ from analysis.data_pipeline import (
 )
 from analysis.player_explorer import (
     get_division_records,
+    get_opponent_division_records,
     get_player_explorer,
 )
 
@@ -304,11 +305,78 @@ if opponents.empty:
         "No completed opponent results yet."
     )
 else:
-    st.dataframe(
-        opponents,
-        use_container_width=True,
-        hide_index=True,
+    opponent_division_records = (
+        get_opponent_division_records(
+            opponents
+        )
     )
+
+    for division in opponent_division_records:
+
+        division_name = division["Division"]
+        wins = division["Correct"]
+        losses = division["Incorrect"]
+        win_pct = division["Win_Pct"]
+
+        expander_label = (
+            f"{division_name} — "
+            f"{wins}-{losses} "
+            f"({win_pct:.1%})"
+        )
+
+        with st.expander(expander_label):
+
+            division_teams = (
+                division["Teams"].copy()
+            )
+
+            display_teams = division_teams[
+                [
+                    "opponent",
+                    "Correct",
+                    "Incorrect",
+                    "Picks",
+                    "Win_Pct",
+                ]
+            ].copy()
+
+            display_teams["Record"] = (
+                display_teams["Correct"]
+                .astype(str)
+                + "-"
+                + display_teams["Incorrect"]
+                .astype(str)
+            )
+
+            display_teams["Win %"] = (
+                display_teams["Win_Pct"]
+                .map(
+                    lambda value:
+                    f"{value:.1%}"
+                )
+            )
+
+            display_teams = (
+                display_teams[
+                    [
+                        "opponent",
+                        "Record",
+                        "Picks",
+                        "Win %",
+                    ]
+                ]
+                .rename(
+                    columns={
+                        "opponent": "Team",
+                    }
+                )
+            )
+
+            st.dataframe(
+                display_teams,
+                use_container_width=True,
+                hide_index=True,
+            )
 
 st.subheader("Confidence Performance")
 

@@ -397,6 +397,47 @@ def get_division_records(team_records_df):
 
     return division_records
 
+def get_opponent_division_records(opponent_records_df):
+
+    if opponent_records_df.empty:
+        return []
+
+    division_records = []
+
+    for division, teams in NFL_DIVISIONS.items():
+
+        division_teams = opponent_records_df[
+            opponent_records_df["opponent"].isin(teams)
+        ].copy()
+
+        wins = int(
+            division_teams["Correct"].sum()
+        )
+
+        losses = int(
+            division_teams["Incorrect"].sum()
+        )
+
+        total_picks = wins + losses
+
+        if total_picks > 0:
+            win_pct = wins / total_picks
+        else:
+            win_pct = 0.0
+
+        division_records.append(
+            {
+                "Division": division,
+                "Correct": wins,
+                "Incorrect": losses,
+                "Picks": total_picks,
+                "Win_Pct": win_pct,
+                "Teams": division_teams,
+            }
+        )
+
+    return division_records
+
 def display_player_explorer(df, player):
     """
     Display Player Explorer v2 in the terminal.
