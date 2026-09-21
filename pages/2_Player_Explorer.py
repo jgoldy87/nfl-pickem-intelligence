@@ -4,6 +4,7 @@ from analysis.data_pipeline import (
     build_master_results_from_supabase,
 )
 from analysis.player_explorer import (
+    get_division_records,
     get_player_explorer,
 )
 
@@ -221,11 +222,76 @@ if teams.empty:
         "No completed team results yet."
     )
 else:
-    st.dataframe(
-        teams,
-        use_container_width=True,
-        hide_index=True,
+    division_records = get_division_records(
+        teams
     )
+
+    for division in division_records:
+
+        division_name = division["Division"]
+        wins = division["Correct"]
+        losses = division["Incorrect"]
+        win_pct = division["Win_Pct"]
+
+        expander_label = (
+            f"{division_name} — "
+            f"{wins}-{losses} "
+            f"({win_pct:.1%})"
+        )
+
+        with st.expander(expander_label):
+
+            division_teams = (
+                division["Teams"].copy()
+            )
+
+            display_teams = division_teams[
+                [
+                    "picked_team",
+                    "Correct",
+                    "Incorrect",
+                    "Picks",
+                    "Win_Pct",
+                ]
+            ].copy()
+
+            display_teams["Record"] = (
+                display_teams["Correct"]
+                .astype(str)
+                + "-"
+                + display_teams["Incorrect"]
+                .astype(str)
+            )
+
+            display_teams["Win %"] = (
+                display_teams["Win_Pct"]
+                .map(
+                    lambda value:
+                    f"{value:.1%}"
+                )
+            )
+
+            display_teams = (
+                display_teams[
+                    [
+                        "picked_team",
+                        "Record",
+                        "Picks",
+                        "Win %",
+                    ]
+                ]
+                .rename(
+                    columns={
+                        "picked_team": "Team",
+                    }
+                )
+            )
+
+            st.dataframe(
+                display_teams,
+                use_container_width=True,
+                hide_index=True,
+            )
 
 st.subheader(
     "Record When Picking Against Team"

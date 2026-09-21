@@ -1,5 +1,15 @@
 from analysis.pickem_analyzer import player_summary
 
+NFL_DIVISIONS = {
+    "AFC East": ["BUF", "MIA", "NE", "NYJ"],
+    "AFC North": ["BAL", "CIN", "CLE", "PIT"],
+    "AFC South": ["HOU", "IND", "JAX", "TEN"],
+    "AFC West": ["DEN", "KC", "LV", "LAC"],
+    "NFC East": ["DAL", "NYG", "PHI", "WAS"],
+    "NFC North": ["CHI", "DET", "GB", "MIN"],
+    "NFC South": ["ATL", "CAR", "NO", "TB"],
+    "NFC West": ["ARI", "LA", "SF", "SEA"],
+}
 
 def get_player_explorer(df, player):
     """
@@ -346,6 +356,46 @@ def get_player_explorer(df, player):
         "worst_confidence_band": worst_confidence_band_summary,
     }
 
+def get_division_records(team_records_df):
+
+    if team_records_df.empty:
+        return []
+
+    division_records = []
+
+    for division, teams in NFL_DIVISIONS.items():
+
+        division_teams = team_records_df[
+            team_records_df["picked_team"].isin(teams)
+        ].copy()
+
+        wins = int(
+            division_teams["Correct"].sum()
+        )
+
+        losses = int(
+            division_teams["Incorrect"].sum()
+        )
+
+        total_picks = wins + losses
+
+        if total_picks > 0:
+            win_pct = wins / total_picks
+        else:
+            win_pct = 0.0
+
+        division_records.append(
+            {
+                "Division": division,
+                "Correct": wins,
+                "Incorrect": losses,
+                "Picks": total_picks,
+                "Win_Pct": win_pct,
+                "Teams": division_teams,
+            }
+        )
+
+    return division_records
 
 def display_player_explorer(df, player):
     """
