@@ -240,6 +240,7 @@ def team_records(df):
             Picks=("pick_correct", "count"),
             Correct=("pick_correct", "sum"),
             Confidence_Points=("points_earned", "sum"),
+            Confidence_Risked=("confidence", "sum"),
             Avg_Confidence=("confidence", "mean"),
         )
         .reset_index()
@@ -253,6 +254,11 @@ def team_records(df):
         records["Correct"] / records["Picks"]
     )
 
+    records["Point_Efficiency"] = (
+        records["Confidence_Points"]
+        / records["Confidence_Risked"]
+    )
+
     return records[
         [
             "player",
@@ -262,7 +268,9 @@ def team_records(df):
             "Picks",
             "Win_Pct",
             "Avg_Confidence",
+            "Confidence_Risked",
             "Confidence_Points",
+            "Point_Efficiency",
         ]
     ].sort_values(
         ["player", "picked_team"]
@@ -292,6 +300,7 @@ def opponent_records(df):
             Picks=("pick_correct", "count"),
             Correct=("pick_correct", "sum"),
             Confidence_Points=("points_earned", "sum"),
+            Confidence_Risked=("confidence", "sum"),
             Avg_Confidence=("confidence", "mean"),
         )
         .reset_index()
@@ -305,6 +314,11 @@ def opponent_records(df):
         records["Correct"] / records["Picks"]
     )
 
+    records["Point_Efficiency"] = (
+        records["Confidence_Points"]
+        / records["Confidence_Risked"]
+    )
+
     return records[
         [
             "player",
@@ -314,7 +328,9 @@ def opponent_records(df):
             "Picks",
             "Win_Pct",
             "Avg_Confidence",
+            "Confidence_Risked",
             "Confidence_Points",
+            "Point_Efficiency",
         ]
     ].sort_values(
         ["player", "opponent"]

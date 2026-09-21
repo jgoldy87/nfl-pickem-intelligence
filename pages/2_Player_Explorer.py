@@ -251,8 +251,8 @@ else:
                     "picked_team",
                     "Correct",
                     "Incorrect",
-                    "Picks",
-                    "Win_Pct",
+                    "Avg_Confidence",
+                    "Point_Efficiency",
                 ]
             ].copy()
 
@@ -264,8 +264,16 @@ else:
                 .astype(str)
             )
 
-            display_teams["Win %"] = (
-                display_teams["Win_Pct"]
+            display_teams["Avg Confidence Risked"] = (
+                display_teams["Avg_Confidence"]
+                .map(
+                    lambda value:
+                    f"{value:.1f}"
+                )
+            )
+
+            display_teams["Point Efficiency"] = (
+                display_teams["Point_Efficiency"]
                 .map(
                     lambda value:
                     f"{value:.1%}"
@@ -277,8 +285,8 @@ else:
                     [
                         "picked_team",
                         "Record",
-                        "Picks",
-                        "Win %",
+                        "Avg Confidence Risked",
+                        "Point Efficiency",
                     ]
                 ]
                 .rename(
@@ -335,8 +343,8 @@ else:
                     "opponent",
                     "Correct",
                     "Incorrect",
-                    "Picks",
-                    "Win_Pct",
+                    "Avg_Confidence",
+                    "Point_Efficiency",
                 ]
             ].copy()
 
@@ -348,8 +356,16 @@ else:
                 .astype(str)
             )
 
-            display_teams["Win %"] = (
-                display_teams["Win_Pct"]
+            display_teams["Avg Confidence Risked"] = (
+                display_teams["Avg_Confidence"]
+                .map(
+                    lambda value:
+                    f"{value:.1f}"
+                )
+            )
+
+            display_teams["Point Efficiency"] = (
+                display_teams["Point_Efficiency"]
                 .map(
                     lambda value:
                     f"{value:.1%}"
@@ -361,8 +377,8 @@ else:
                     [
                         "opponent",
                         "Record",
-                        "Picks",
-                        "Win %",
+                        "Avg Confidence Risked",
+                        "Point Efficiency",
                     ]
                 ]
                 .rename(
