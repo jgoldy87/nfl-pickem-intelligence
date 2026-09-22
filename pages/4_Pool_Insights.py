@@ -5,6 +5,8 @@ from analysis.pickem_analyzer import (
     pool_game_results,
     lone_wolf_picks,
     lone_wolf_performance,
+    lone_wolf_standings_impact,
+    lone_wolf_impact_detail,
     unanimous_picks,
     collective_disasters,
     collective_triumphs,
@@ -303,7 +305,6 @@ with behavior_tab:
 
     st.subheader("Lone Wolf Performance")
 
-
     lone_wolf_summary = lone_wolf_performance(
         filtered_df
     )
@@ -322,6 +323,14 @@ with behavior_tab:
             lone_wolf_summary.copy()
         )
 
+        # Combine wins and losses into one record
+        display_summary["Lone Wolf Record"] = (
+            display_summary["Correct"].astype(str)
+            + "-"
+            + display_summary["Incorrect"].astype(str)
+        )
+
+        # Format winning percentage
         display_summary["Win_Pct"] = (
             display_summary["Win_Pct"]
             .map(
@@ -332,7 +341,14 @@ with behavior_tab:
         )
 
         display_summary = (
-            display_summary.rename(
+            display_summary[
+                [
+                    "Lone_Wolf",
+                    "Lone Wolf Record",
+                    "Win_Pct",
+                ]
+            ]
+            .rename(
                 columns={
                     "Lone_Wolf": "Player",
                     "Win_Pct": "Win %",
@@ -345,6 +361,249 @@ with behavior_tab:
             use_container_width=True,
             hide_index=True,
         )
+
+    st.subheader("Lone Wolf Point Swing")
+
+    st.caption(
+        "Net confidence-point swing between each pair of "
+        "players across all Lone Wolf games. Positive values "
+        "mean the player has gained ground; negative values "
+        "mean the player has lost ground."
+    )
+
+    impact = lone_wolf_standings_impact(
+        filtered_df
+    )
+
+    if impact.empty:
+
+        st.info(
+            "No Lone Wolf standings impact is "
+            "available yet."
+        )
+
+    else:
+
+        display_impact = impact.copy()
+
+        for player in display_impact.columns:
+
+            display_impact[player] = (
+                display_impact[player]
+                .map(
+                    lambda value: (
+                        f"{value:+g}"
+                    )
+                )
+            )
+
+        for player in display_impact.index:
+
+            if player in display_impact.columns:
+                display_impact.loc[
+                    player,
+                    player,
+                ] = "—"
+
+        st.dataframe(
+            display_impact,
+            use_container_width=True,
+        )
+
+    with st.expander(
+        "View Point Swing Calculations"
+    ):
+
+        impact_detail = lone_wolf_impact_detail(
+            filtered_df
+        )
+
+        if impact_detail.empty:
+
+            st.info(
+                "No Lone Wolf Point Swing calculations "
+                "are available yet."
+            )
+
+        else:
+
+            players = sorted(
+                filtered_df["player"]
+                .dropna()
+                .unique()
+            )
+
+            matchups = []
+
+            for i, player_a in enumerate(players):
+                for player_b in players[i + 1:]:
+                    matchups.append(
+                        (player_a, player_b)
+                    )
+
+            matchup_labels = {
+                f"{player_a} vs {player_b}": (
+                    player_a,
+                    player_b,
+                )
+                for player_a, player_b in matchups
+            }
+
+            selected_matchup = st.selectbox(
+                "Select player matchup",
+                options=list(
+                    matchup_labels.keys()
+                ),
+                key="lone_wolf_swing_matchup",
+            )
+
+            player_a, player_b = (
+                matchup_labels[selected_matchup]
+            )
+
+            matchup_detail = impact_detail[
+                (
+                    (
+                        impact_detail["Lone_Wolf"]
+                        == player_a
+                    )
+                    & (
+                        impact_detail["Opponent"]
+                        == player_b
+                    )
+                )
+                |
+                (
+                    (
+                        impact_detail["Lone_Wolf"]
+                        == player_b
+                    )
+                    & (
+                        impact_detail["Opponent"]
+                        == player_a
+                    )
+                )
+            ].copy()
+
+            if matchup_detail.empty:
+
+                st.info(
+                    "No Lone Wolf games are available "
+                    "for this matchup."
+                )
+
+            else:
+
+                # Calculate every swing from player A's
+                # perspective.
+                matchup_detail["Swing"] = (
+                    matchup_detail.apply(
+                        lambda row: (
+                            row["Impact"]
+                            if row["Lone_Wolf"]
+                            == player_a
+                            else -row["Impact"]
+                        ),
+                        axis=1,
+                    )
+                )
+
+                # Get each player's actual points.
+                matchup_detail[
+                    f"{player_a} Points"
+                ] = matchup_detail.apply(
+                    lambda row: (
+                        row["Lone_Wolf_Points"]
+                        if row["Lone_Wolf"]
+                        == player_a
+                        else row["Opponent_Points"]
+                    ),
+                    axis=1,
+                )
+
+                matchup_detail[
+                    f"{player_b} Points"
+                ] = matchup_detail.apply(
+                    lambda row: (
+                        row["Lone_Wolf_Points"]
+                        if row["Lone_Wolf"]
+                        == player_b
+                        else row["Opponent_Points"]
+                    ),
+                    axis=1,
+                )
+
+                total_swing = (
+                    matchup_detail["Swing"].sum()
+                )
+
+                if total_swing > 0:
+                    swing_summary = (
+                        f"+{total_swing:g} "
+                        f"{player_a}"
+                    )
+                elif total_swing < 0:
+                    swing_summary = (
+                        f"+{abs(total_swing):g} "
+                        f"{player_b}"
+                    )
+                else:
+                    swing_summary = "Even"
+
+                st.metric(
+                    "Total Point Swing",
+                    swing_summary,
+                )
+
+                display_detail = (
+                    matchup_detail[
+                        [
+                            "Week",
+                            "Game",
+                            "Lone_Wolf",
+                            f"{player_a} Points",
+                            f"{player_b} Points",
+                            "Swing",
+                        ]
+                    ]
+                    .copy()
+                )
+
+                display_detail["Game"] = (
+                    display_detail["Game"]
+                    .map(
+                        lambda game_id: (
+                            f"{game_id.split('_')[2]} "
+                            f"@ {game_id.split('_')[3]}"
+                        )
+                    )
+                )
+
+                display_detail = (
+                    display_detail.rename(
+                        columns={
+                            "Lone_Wolf": "Lone Wolf",
+                        }
+                    )
+                )
+
+                display_detail["Swing"] = (
+                    display_detail["Swing"]
+                    .map(
+                        lambda value: f"{value:+g}"
+                    )
+                )
+
+                st.caption(
+                    f"Swing is shown from "
+                    f"{player_a}'s perspective."
+                )
+
+                st.dataframe(
+                    display_detail,
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
     st.divider()
 

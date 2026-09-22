@@ -620,6 +620,13 @@ def lone_wolf_performance(df):
             ]
         )
 
+    lone_wolves["Net_Points"] = (
+        lone_wolves["Confidence"].where(
+            lone_wolves["Correct"] == True,
+            -lone_wolves["Confidence"],
+        )
+    )
+
     performance = (
         lone_wolves
         .groupby(
@@ -633,6 +640,10 @@ def lone_wolf_performance(df):
             ),
             Correct=(
                 "Correct",
+                "sum",
+            ),
+            Net_Points_Gained=(
+                "Net_Points",
                 "sum",
             ),
         )
@@ -662,6 +673,166 @@ def lone_wolf_performance(df):
     return performance.reset_index(
         drop=True
     )
+
+def lone_wolf_standings_impact(df):
+    """
+    Calculate the standings impact of Lone Wolf games
+    between the Lone Wolf and each opponent.
+
+    Each cell represents the net confidence-point
+    advantage gained or lost through Lone Wolf
+    situations between two players.
+    """
+
+    lone_wolves = lone_wolf_picks(df)
+
+    if lone_wolves.empty:
+        return pd.DataFrame()
+
+    completed = completed_results(df)
+
+    players = sorted(
+        completed["player"].dropna().unique()
+    )
+
+    impact = pd.DataFrame(
+        0,
+        index=players,
+        columns=players,
+        dtype=int,
+    )
+
+    for _, lone_wolf in lone_wolves.iterrows():
+
+        game_id = lone_wolf["game_id"]
+        lone_wolf_player = lone_wolf[
+            "Lone_Wolf"
+        ]
+
+        game_results = completed[
+            completed["game_id"] == game_id
+        ]
+
+        if game_results.empty:
+            continue
+
+        points_by_player = (
+            game_results
+            .set_index("player")["points_earned"]
+            .to_dict()
+        )
+
+        if (
+            lone_wolf_player
+            not in points_by_player
+        ):
+            continue
+
+        lone_wolf_points = points_by_player[
+            lone_wolf_player
+        ]
+
+        for opponent in players:
+
+            if opponent == lone_wolf_player:
+                continue
+
+            if opponent not in points_by_player:
+                continue
+
+            opponent_points = points_by_player[
+                opponent
+            ]
+
+            difference = (
+                lone_wolf_points
+                - opponent_points
+            )
+
+            impact.loc[
+                lone_wolf_player,
+                opponent,
+            ] += difference
+
+            impact.loc[
+                opponent,
+                lone_wolf_player,
+            ] -= difference
+
+    impact.index.name = "Player"
+
+    return impact
+
+def lone_wolf_impact_detail(df):
+    """
+    Show the game-by-game calculations used to build
+    the Lone Wolf Standings Impact matrix.
+    """
+
+    lone_wolves = lone_wolf_picks(df)
+
+    if lone_wolves.empty:
+        return pd.DataFrame()
+
+    completed = completed_results(df)
+
+    detail_rows = []
+
+    for _, lone_wolf in lone_wolves.iterrows():
+
+        game_id = lone_wolf["game_id"]
+        lone_wolf_player = lone_wolf["Lone_Wolf"]
+
+        game_results = completed[
+            completed["game_id"] == game_id
+        ]
+
+        if game_results.empty:
+            continue
+
+        lone_wolf_result = game_results[
+            game_results["player"]
+            == lone_wolf_player
+        ]
+
+        if lone_wolf_result.empty:
+            continue
+
+        lone_wolf_points = (
+            lone_wolf_result.iloc[0][
+                "points_earned"
+            ]
+        )
+
+        for _, opponent in game_results.iterrows():
+
+            opponent_player = opponent["player"]
+
+            if opponent_player == lone_wolf_player:
+                continue
+
+            opponent_points = opponent[
+                "points_earned"
+            ]
+
+            impact = (
+                lone_wolf_points
+                - opponent_points
+            )
+
+            detail_rows.append(
+                {
+                    "Week": lone_wolf["week"],
+                    "Game": game_id,
+                    "Lone_Wolf": lone_wolf_player,
+                    "Opponent": opponent_player,
+                    "Lone_Wolf_Points": lone_wolf_points,
+                    "Opponent_Points": opponent_points,
+                    "Impact": impact,
+                }
+            )
+
+    return pd.DataFrame(detail_rows)
 
 def unanimous_picks(df):
     completed = completed_results(
