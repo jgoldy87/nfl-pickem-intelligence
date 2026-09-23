@@ -177,8 +177,8 @@ with game_tab:
                 columns={
                     "week": "Week",
                     "Unanimous_Pick": "Pool Pick",
-                    "Total_Confidence": "Confidence Earned",
-                    "Avg_Confidence": "Avg Confidence",
+                    "Total_Confidence": "Points Earned",
+                    "Avg_Confidence": "Avg Confidence Risked",
                 }
             )
         )
@@ -236,8 +236,8 @@ with game_tab:
                     "week": "Week",
                     "Unanimous_Pick": "Pool Pick",
                     "winner": "Winner",
-                    "Total_Confidence": "Confidence Lost",
-                    "Avg_Confidence": "Avg Confidence",
+                    "Total_Confidence": "Points Lost",
+                    "Avg_Confidence": "Avg Confidence Risked",
                 }
             )
         )
@@ -289,8 +289,8 @@ with game_tab:
             ]
             .rename(
                 columns={
-                    "Confidence_Lost": "Confidence Lost",
-                    "Avg_Confidence_Lost": "Avg Confidence Lost",
+                    "Confidence_Lost": "Points Lost",
+                    "Avg_Confidence_Lost": "Avg Points Lost per Burn",
                 }
             )
         )
@@ -324,7 +324,7 @@ with behavior_tab:
         )
 
         # Combine wins and losses into one record
-        display_summary["Lone Wolf Record"] = (
+        display_summary["Record"] = (
             display_summary["Correct"].astype(str)
             + "-"
             + display_summary["Incorrect"].astype(str)
@@ -344,7 +344,7 @@ with behavior_tab:
             display_summary[
                 [
                     "Lone_Wolf",
-                    "Lone Wolf Record",
+                    "Record",
                     "Win_Pct",
                 ]
             ]
@@ -378,7 +378,7 @@ with behavior_tab:
     if impact.empty:
 
         st.info(
-            "No Lone Wolf standings impact is "
+            "No Lone Wolf Point Swing is "
             "available yet."
         )
 
@@ -765,8 +765,8 @@ with behavior_tab:
                 columns={
                     "week": "Week",
                     "Unanimous_Pick": "Unanimous Pick",
-                    "Total_Confidence": "Total Confidence",
-                    "Avg_Confidence": "Avg Confidence",
+                    "Total_Confidence": "Total Confidence Risked",
+                    "Avg_Confidence": "Avg Confidence Risked",
                 }
             )
         )
@@ -774,7 +774,7 @@ with behavior_tab:
         display_unanimous = display_unanimous.sort_values(
             by=[
                 "Week",
-                "Total Confidence",
+                "Total Confidence Risked",
                 "Matchup",
             ],
             ascending=[

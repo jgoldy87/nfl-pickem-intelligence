@@ -202,31 +202,31 @@ if games:
             weekly_picks
         )
 
-        st.subheader("Your Pick Summary")
+        st.subheader("Pick Summary")
 
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
             st.metric(
-                "Home Teams",
+                "Home Picks",
                 pick_profile["home_picks"],
             )
 
         with col2:
             st.metric(
-                "Away Teams",
+                "Away Picks",
                 pick_profile["away_picks"],
             )
 
         with col3:
             st.metric(
-                "Favorites",
+                "Favorite Picks",
                 pick_profile["favorite_picks"],
             )
 
         with col4:
             st.metric(
-                "Underdogs",
+                "Underdog Picks",
                 pick_profile["underdog_picks"],
             )
 
@@ -374,7 +374,7 @@ if games:
                 st.caption(
                     f"Your confidence: "
                     f"{most_overconfident['Your Confidence']} "
-                    f"• Recommended: "
+                    f"• Market Confidence: "
                     f"{most_overconfident['Recommended Confidence']} "
                     f"• Market: "
                     f"{most_overconfident['Market Probability']}%"
@@ -395,7 +395,7 @@ if games:
                 st.caption(
                     f"Your confidence: "
                     f"{most_underconfident['Your Confidence']} "
-                    f"• Recommended: "
+                    f"• Market Confidence: "
                     f"{most_underconfident['Recommended Confidence']} "
                     f"• Market: "
                     f"{most_underconfident['Market Probability']}%"
@@ -441,7 +441,7 @@ if games:
             st.caption(
                 f"Your confidence: "
                 f"{strongest_agreement['Your Confidence']} "
-                f"• Recommended: "
+                f"• Market Confidence: "
                 f"{strongest_agreement['Recommended Confidence']} "
                 f"• Market: "
                 f"{strongest_agreement['Market Probability']}%"
@@ -460,11 +460,24 @@ if games:
                 .reset_index(drop=True)
             )
 
+            display_rankings = (
+                display_rankings.rename(
+                    columns={
+                        "Recommended Confidence": (
+                            "Market Confidence"
+                        ),
+                        "Difference": (
+                            "Confidence Difference"
+                        ),
+                    }
+                )
+            )
+
             styled_rankings = (
                 display_rankings.style
                 .map(
                     highlight_difference,
-                    subset=["Difference"],
+                    subset=["Confidence Difference"],
                 )
             )
 

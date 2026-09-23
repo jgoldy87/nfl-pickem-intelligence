@@ -79,6 +79,12 @@ else:
 
     display_overall = overall.copy()
 
+    display_overall["Record"] = (
+        display_overall["Correct"].astype(str)
+        + "-"
+        + display_overall["Incorrect"].astype(str)
+    )
+
     if "Win_Pct" in display_overall.columns:
         display_overall["Win_Pct"] = (
             display_overall["Win_Pct"]
@@ -106,12 +112,9 @@ else:
     display_overall = display_overall.rename(
         columns={
             "player": "Player",
-            "Correct": "Correct",
-            "Incorrect": "Incorrect",
-            "Picks": "Picks",
             "Win_Pct": "Win %",
-            "Confidence_Points": "Confidence Points",
-            "Confidence_Risked": "Confidence Risked",
+            "Confidence_Points": "Points Earned",
+            "Confidence_Risked": "Points Risked",
             "Point_Efficiency": "Point Efficiency",
         }
     )
@@ -124,6 +127,24 @@ else:
             len(display_overall) + 1,
         ),
     )
+
+    column_order = [
+        column
+        for column in [
+            "Rank",
+            "Player",
+            "Record",
+            "Win %",
+            "Points Earned",
+            "Points Risked",
+            "Point Efficiency",
+        ]
+        if column in display_overall.columns
+    ]
+
+    display_overall = display_overall[
+        column_order
+    ]
 
     st.dataframe(
         display_overall,
@@ -171,6 +192,12 @@ else:
 
     display_week = week_table.copy()
 
+    display_week["Record"] = (
+        display_week["Correct"].astype(str)
+        + "-"
+        + display_week["Incorrect"].astype(str)
+    )
+
     if "Win_Pct" in display_week.columns:
         display_week["Win_Pct"] = (
             display_week["Win_Pct"]
@@ -186,11 +213,9 @@ else:
     display_week = display_week.rename(
         columns={
             "player": "Player",
-            "Correct": "Correct",
-            "Incorrect": "Incorrect",
-            "Picks": "Picks",
             "Win_Pct": "Win %",
-            "Confidence_Points": "Confidence Points",
+            "Confidence_Points": "Points Earned",
+            "Confidence_Risked": "Points Risked",
             "Weekly_Rank": "Rank",
         }
     )
@@ -200,11 +225,9 @@ else:
         for column in [
             "Rank",
             "Player",
-            "Correct",
-            "Incorrect",
-            "Picks",
+            "Record",
             "Win %",
-            "Confidence Points",
+            "Points Earned",
         ]
         if column in display_week.columns
     ]

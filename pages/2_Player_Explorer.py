@@ -76,17 +76,17 @@ win_pct = (
 )
 
 col2.metric(
-    "Win Percentage",
+    "Win %",
     win_pct,
 )
 
 col3.metric(
-    "Confidence Points",
+    "Points Earned",
     overview["Confidence_Points"],
 )
 
 col4.metric(
-    "Confidence Risked",
+    "Points Risked",
     overview["Confidence_Risked"],
 )
 
@@ -212,8 +212,8 @@ else:
             columns={
                 "pick_location": "Location",
                 "Win_Pct": "Win %",
-                "Avg_Confidence": "Avg Confidence",
-                "Confidence_Points": "Confidence Points",
+                "Avg_Confidence": "Avg Confidence Risked",
+                "Confidence_Points": "Points Earned",
             }
         )
     )
@@ -224,7 +224,7 @@ else:
         hide_index=True,
     )
 
-st.subheader("Team Records")
+st.subheader("Record When Picking Team")
 
 teams = explorer["teams"]
 
@@ -443,8 +443,8 @@ else:
             columns={
                 "Confidence_Band": "Confidence Band",
                 "Win_Pct": "Win %",
-                "Avg_Confidence": "Avg Confidence",
-                "Confidence_Points": "Confidence Points",
+                "Avg_Confidence": "Avg Confidence Risked",
+                "Confidence_Points": "Points Earned",
             }
         )
     )
