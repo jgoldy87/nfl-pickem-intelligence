@@ -181,9 +181,45 @@ if home_away.empty:
     st.info(
         "No completed home/away results yet."
     )
+
 else:
+    display_home_away = home_away.copy()
+
+    display_home_away["Record"] = (
+        display_home_away["Correct"].astype(str)
+        + "-"
+        + display_home_away["Incorrect"].astype(str)
+    )
+
+    display_home_away["Win_Pct"] = (
+        display_home_away["Win_Pct"]
+        .map(
+            lambda value: f"{value:.1%}"
+        )
+    )
+
+    display_home_away = (
+        display_home_away[
+            [
+                "pick_location",
+                "Record",
+                "Win_Pct",
+                "Avg_Confidence",
+                "Confidence_Points",
+            ]
+        ]
+        .rename(
+            columns={
+                "pick_location": "Location",
+                "Win_Pct": "Win %",
+                "Avg_Confidence": "Avg Confidence",
+                "Confidence_Points": "Confidence Points",
+            }
+        )
+    )
+
     st.dataframe(
-        home_away,
+        display_home_away,
         use_container_width=True,
         hide_index=True,
     )
@@ -376,19 +412,45 @@ if confidence.empty:
     st.info(
         "No completed confidence results yet."
     )
-else:
-    confidence = confidence.copy()
 
-    confidence["Win_Pct"] = (
-        confidence["Win_Pct"]
+else:
+    display_confidence = confidence.copy()
+
+    display_confidence["Record"] = (
+        display_confidence["Correct"].astype(str)
+        + "-"
+        + display_confidence["Incorrect"].astype(str)
+    )
+
+    display_confidence["Win_Pct"] = (
+        display_confidence["Win_Pct"]
         .map(
-            lambda value:
-            f"{value:.1%}"
+            lambda value: f"{value:.1%}"
+        )
+    )
+
+    display_confidence = (
+        display_confidence[
+            [
+                "Confidence_Band",
+                "Record",
+                "Win_Pct",
+                "Avg_Confidence",
+                "Confidence_Points",
+            ]
+        ]
+        .rename(
+            columns={
+                "Confidence_Band": "Confidence Band",
+                "Win_Pct": "Win %",
+                "Avg_Confidence": "Avg Confidence",
+                "Confidence_Points": "Confidence Points",
+            }
         )
     )
 
     st.dataframe(
-        confidence,
+        display_confidence,
         use_container_width=True,
         hide_index=True,
     )
