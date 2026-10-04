@@ -12,6 +12,7 @@ from analysis.pickem_analyzer import (
     collective_triumphs,
     pool_burners,
     player_agreement,
+    team_trust,
 )
 
 from analysis.data_pipeline import (
@@ -786,6 +787,62 @@ with behavior_tab:
 
         st.dataframe(
             display_unanimous,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.divider()
+
+    st.subheader("Team Trust")
+
+    st.caption(
+        "How often the pool picked each team "
+        "versus picking against them."
+    )
+
+    trust = team_trust(
+        filtered_df
+    )
+
+    if trust.empty:
+
+        st.info(
+            "No Team Trust data is available yet."
+        )
+
+    else:
+
+        display_trust = trust.copy()
+
+        display_trust["Trust_Rate"] = (
+            display_trust["Trust_Rate"]
+            .map(
+                lambda value: f"{value:.1%}"
+            )
+        )
+
+        display_trust["Fade_Rate"] = (
+            display_trust["Fade_Rate"]
+            .map(
+                lambda value: f"{value:.1%}"
+            )
+        )
+
+        display_trust = (
+            display_trust.rename(
+                columns={
+                    "Picked_Against":
+                        "Picked Against",
+                    "Trust_Rate":
+                        "Trust Rate",
+                    "Fade_Rate":
+                        "Fade Rate",
+                }
+            )
+        )
+
+        st.dataframe(
+            display_trust,
             use_container_width=True,
             hide_index=True,
         )

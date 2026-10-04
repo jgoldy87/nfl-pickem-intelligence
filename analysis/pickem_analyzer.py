@@ -1244,3 +1244,137 @@ def player_week_status(df, player, season=None, week=None):
             remaining_picks == 0
         ),
     }
+
+def team_trust(df):
+    """
+    Summarize how often the pool picks each NFL team
+    versus picking against that team.
+
+    Returns:
+        Team
+        Picked
+        Picked_Against
+        Trust_Rate
+        Fade_Rate
+    """
+
+    if df.empty:
+        return pd.DataFrame()
+
+    data = df.copy()
+
+    required_columns = [
+        "player",
+        "picked_team",
+        "away_team",
+        "home_team",
+    ]
+
+    if any(
+        column not in data.columns
+        for column in required_columns
+    ):
+        return pd.DataFrame()
+
+    # Only use rows containing an actual pick.
+    data = data[
+        data["picked_team"].notna()
+    ].copy()
+
+    if data.empty:
+        return pd.DataFrame()
+
+    # Determine the team each player picked against.
+    data["Picked_Against_Team"] = data.apply(
+        lambda row: (
+            row["home_team"]
+            if row["picked_team"] == row["away_team"]
+            else row["away_team"]
+        ),
+        axis=1,
+    )
+
+    # Build the team universe from the games
+    # represented in the filtered data.
+    teams = sorted(
+        set(data["away_team"].dropna())
+        | set(data["home_team"].dropna())
+    )
+
+    result = pd.DataFrame(
+        {
+            "Team": teams
+        }
+    )
+
+    # Count how often each team was selected.
+    picked = (
+        data
+        .groupby("picked_team")
+        .size()
+        .rename("Picked")
+    )
+
+    # Count how often each team was picked against.
+    picked_against = (
+        data
+        .groupby("Picked_Against_Team")
+        .size()
+        .rename("Picked_Against")
+    )
+
+    result = result.merge(
+        picked,
+        left_on="Team",
+        right_index=True,
+        how="left",
+    )
+
+    result = result.merge(
+        picked_against,
+        left_on="Team",
+        right_index=True,
+        how="left",
+    )
+
+    result["Picked"] = (
+        result["Picked"]
+        .fillna(0)
+        .astype(int)
+    )
+
+    result["Picked_Against"] = (
+        result["Picked_Against"]
+        .fillna(0)
+        .astype(int)
+    )
+
+    total_decisions = (
+        result["Picked"]
+        + result["Picked_Against"]
+    )
+
+    result["Trust_Rate"] = (
+        result["Picked"]
+        / total_decisions
+    )
+
+    result["Fade_Rate"] = (
+        result["Picked_Against"]
+        / total_decisions
+    )
+
+    result = result.sort_values(
+        by=[
+            "Fade_Rate",
+            "Picked_Against",
+            "Team",
+        ],
+        ascending=[
+            False,
+            False,
+            True,
+        ],
+    ).reset_index(drop=True)
+
+    return result
