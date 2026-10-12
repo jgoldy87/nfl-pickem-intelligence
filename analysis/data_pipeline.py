@@ -684,6 +684,7 @@ def build_results_from_picks(picks):
         "winner",
         "status",
         "game_completed",
+        "is_tie",
     ]
 
     merged = picks.merge(
@@ -738,48 +739,39 @@ def build_results_from_picks(picks):
         .str.upper()
     )
 
+    # Identify completed, tied, and decided games.
+    completed = merged["game_completed"].eq(True)
+    tied = completed & merged["is_tie"].eq(True)
+    decided = completed & ~tied
+
+    # Default: no pick result until the game is decided.
     merged["pick_correct"] = pd.Series(
         pd.NA,
         index=merged.index,
         dtype="boolean",
     )
 
-    completed = (
-        merged["game_completed"] == True
+    # Only games with a winner count as wins or losses.
+    merged.loc[decided, "pick_correct"] = (
+        merged.loc[decided, "picked_team"]
+        == merged.loc[decided, "winner"]
     )
 
-    merged.loc[
-        completed,
-        "pick_correct",
-    ] = (
-        merged.loc[
-            completed,
-            "picked_team",
-        ]
-        == merged.loc[
-            completed,
-            "winner",
-        ]
-    )
-
+    # Default: no points until the game is completed.
     merged["points_earned"] = pd.Series(
         pd.NA,
         index=merged.index,
         dtype="Int64",
     )
 
-    merged.loc[
-        completed,
-        "points_earned",
-    ] = merged.loc[
-        completed,
-        "confidence",
-    ].where(
-        merged.loc[
-            completed,
-            "pick_correct",
-        ],
-        0,
+    # Completed games, including ties, initially receive zero.
+    merged.loc[completed, "points_earned"] = 0
+
+    # Award confidence points only for correct picks.
+    correct = decided & merged["pick_correct"].fillna(False)
+
+    merged.loc[correct, "points_earned"] = (
+        merged.loc[correct, "confidence"]
     )
 
     merged["picked_home"] = (

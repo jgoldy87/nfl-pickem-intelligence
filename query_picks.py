@@ -1,194 +1,126 @@
 import pandas as pd
 
-from analysis.database import load_picks
+from analysis.data_pipeline import build_master_results_from_supabase
 
-def main():
 
-    df = load_picks()
+# Build current results from Supabase picks + NFL results
+df = build_master_results_from_supabase()
 
-    # Limit analysis to Weeks 1-3.
-    df = df[
-        (df["season"] == 2026)
-        & (df["week"].between(1, 3))
-    ].copy()
+# 2026 season, completed games only
+df = df[
+    (df["season"] == 2026)
+    & (df["game_completed"] == True)
+].copy()
 
-    # --------------------------------------------------
-    # Determine which team each player picked against
-    # --------------------------------------------------
 
-    def get_opponent(row):
+# ---------------------------------------------------------
+# POINTS LOST
+# ---------------------------------------------------------
 
-        parts = row["game_id"].split("_")
+df["points_lost"] = df["confidence"].where(
+    df["pick_correct"] == False,
+    0
+)
 
-        away_team = parts[2]
-        home_team = parts[3]
 
-        if row["pick"] == away_team:
-            return home_team
+# ---------------------------------------------------------
+# TEAM LOYALTY
+# ---------------------------------------------------------
 
-        if row["pick"] == home_team:
-            return away_team
-
-        return None
-
-    df["opponent"] = df.apply(
-        get_opponent,
-        axis=1,
+loyalty = (
+    df.groupby(["player", "picked_team"])
+    .agg(
+        Times_Picked=("game_id", "count"),
+        Wins=("pick_correct", "sum"),
+        Points_Earned=("points_earned", "sum"),
+        Points_Lost=("points_lost", "sum"),
+        Avg_Confidence=("confidence", "mean"),
     )
+    .reset_index()
+)
 
-    # --------------------------------------------------
-    # Count times each team was picked
-    # --------------------------------------------------
+# Record
+loyalty["Wins"] = loyalty["Wins"].astype(int)
+loyalty["Losses"] = loyalty["Times_Picked"] - loyalty["Wins"]
 
-    picked = (
-        df.groupby("pick")
-        .size()
-        .reset_index(
-            name="Picked"
-        )
-        .rename(
-            columns={
-                "pick": "Team",
-            }
-        )
-    )
+loyalty["Record"] = (
+    loyalty["Wins"].astype(str)
+    + "-"
+    + loyalty["Losses"].astype(str)
+)
 
-    # --------------------------------------------------
-    # Count times each team was picked against
-    # --------------------------------------------------
+# Win %
+loyalty["Win_Pct"] = (
+    loyalty["Wins"] / loyalty["Times_Picked"] * 100
+).round(1)
 
-    picked_against = (
-        df.groupby("opponent")
-        .size()
-        .reset_index(
-            name="Picked Against"
-        )
-        .rename(
-            columns={
-                "opponent": "Team",
-            }
-        )
-    )
+# Round average confidence
+loyalty["Avg_Confidence"] = loyalty["Avg_Confidence"].round(2)
 
-    # --------------------------------------------------
-    # All 32 NFL teams
-    # --------------------------------------------------
 
-    nfl_teams = [
-        "ARI", "ATL", "BAL", "BUF",
-        "CAR", "CHI", "CIN", "CLE",
-        "DAL", "DEN", "DET", "GB",
-        "HOU", "IND", "JAX", "KC",
-        "LV", "LAC", "LA", "MIA",
-        "MIN", "NE", "NO", "NYG",
-        "NYJ", "PHI", "PIT", "SEA",
-        "SF", "TB", "TEN", "WAS",
+# ---------------------------------------------------------
+# CLEAN COLUMN NAMES
+# ---------------------------------------------------------
+
+loyalty = loyalty.rename(
+    columns={
+        "player": "Player",
+        "picked_team": "Team",
+        "Times_Picked": "Times Picked",
+        "Win_Pct": "Win %",
+        "Points_Earned": "Points Earned",
+        "Points_Lost": "Points Lost",
+        "Avg_Confidence": "Avg Confidence",
+    }
+)
+
+
+# ---------------------------------------------------------
+# SORT
+# ---------------------------------------------------------
+
+loyalty = loyalty.sort_values(
+    by=[
+        "Player",
+        "Times Picked",
+        "Avg Confidence",
+    ],
+    ascending=[
+        True,
+        False,
+        False,
+    ],
+)
+
+
+# ---------------------------------------------------------
+# FINAL DISPLAY
+# ---------------------------------------------------------
+
+loyalty = loyalty[
+    [
+        "Player",
+        "Team",
+        "Times Picked",
+        "Record",
+        "Win %",
+        "Avg Confidence",
+        "Points Earned",
+        "Points Lost",
     ]
-
-    result = pd.DataFrame(
-        {
-            "Team": nfl_teams
-        }
-    )
-
-    # --------------------------------------------------
-    # Combine results
-    # --------------------------------------------------
-
-    result = result.merge(
-        picked,
-        on="Team",
-        how="left",
-    )
-
-    result = result.merge(
-        picked_against,
-        on="Team",
-        how="left",
-    )
-
-    result["Picked"] = (
-        result["Picked"]
-        .fillna(0)
-        .astype(int)
-    )
-
-    result["Picked Against"] = (
-        result["Picked Against"]
-        .fillna(0)
-        .astype(int)
-    )
-
-    # --------------------------------------------------
-    # Calculate trust and fade rates
-    # --------------------------------------------------
-
-    result["Total Decisions"] = (
-        result["Picked"]
-        + result["Picked Against"]
-    )
-
-    result["Trust Rate"] = (
-        result["Picked"]
-        / result["Total Decisions"]
-    )
-
-    result["Fade Rate"] = (
-        result["Picked Against"]
-        / result["Total Decisions"]
-    )
-
-    # Format percentages.
-    result["Trust Rate"] = (
-        result["Trust Rate"]
-        .map(
-            lambda value: (
-                f"{value:.1%}"
-                if pd.notna(value)
-                else "—"
-            )
-        )
-    )
-
-    result["Fade Rate"] = (
-        result["Fade Rate"]
-        .map(
-            lambda value: (
-                f"{value:.1%}"
-                if pd.notna(value)
-                else "—"
-            )
-        )
-    )
-
-    # We don't need Total Decisions in the final table.
-    result = result.drop(
-        columns="Total Decisions"
-    )
-
-    # Sort by teams picked against most often.
-    result = result.sort_values(
-        by=[
-            "Picked Against",
-            "Picked",
-        ],
-        ascending=[
-            False,
-            True,
-        ],
-    )
-
-    print(
-        "\nTEAM TRUST — WEEKS 1-3"
-    )
-    print("=" * 70)
-
-    print(
-        result.to_string(
-            index=False
-        )
-    )
+]
 
 
-if __name__ == "__main__":
-    main()
+print("\nTEAM LOYALTY")
+print("=" * 95)
+
+for player in loyalty["Player"].unique():
+
+    print(f"\n{player.upper()}")
+    print("-" * 95)
+
+    player_results = loyalty[
+        loyalty["Player"] == player
+    ].drop(columns="Player")
+
+    print(player_results.to_string(index=False))

@@ -36,6 +36,12 @@ def fetch_week_results(
         & week_df["away_score"].notna()
     )
 
+    # Identify completed games that ended in a tie.
+    week_df["is_tie"] = (
+        week_df["game_completed"]
+        & (week_df["home_score"] == week_df["away_score"])
+    )
+
     # Default status
     week_df["status"] = "scheduled"
 
@@ -91,6 +97,7 @@ def fetch_week_results(
         "winner",
         "status",
         "game_completed",
+        "is_tie",
     ]
 
     return week_df[

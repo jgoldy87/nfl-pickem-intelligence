@@ -495,9 +495,14 @@ def pool_game_results(df):
     return game_results
 
 def lone_wolf_picks(df):
+    # Exclude tied games from Lone Wolf performance.
     completed = completed_results(
         df
     )
+
+    completed = completed[
+        completed["pick_correct"].notna()
+    ].copy()
 
     if completed.empty:
         return pd.DataFrame(
@@ -838,6 +843,11 @@ def unanimous_picks(df):
     completed = completed_results(
         df
     )
+
+    # Exclude tied games from unanimous-pick results.
+    completed = completed[
+        completed["pick_correct"].notna()
+    ].copy()
 
     if completed.empty:
         return pd.DataFrame(
@@ -1225,8 +1235,8 @@ def player_week_status(df, player, season=None, week=None):
         completed["pick_correct"].sum()
     ) if completed_picks else 0
 
-    incorrect = (
-        completed_picks - correct
+    incorrect = int(
+        (completed["pick_correct"] == False).sum()
     )
 
     confidence_points = int(
