@@ -1,5 +1,7 @@
 import streamlit as st
 
+import pandas as pd
+
 from analysis.data_pipeline import (
     build_master_results_from_supabase,
 )
@@ -453,4 +455,102 @@ else:
         display_confidence,
         use_container_width=True,
         hide_index=True,
+    )
+
+st.subheader("Confidence Level Performance")
+
+confidence_levels = explorer["confidence_levels"]
+
+if confidence_levels.empty:
+    st.info("No completed confidence level results yet.")
+
+else:
+    # Sort from highest to lowest confidence.
+    confidence_levels = confidence_levels.sort_values(
+        "confidence",
+        ascending=False,
+    ).copy()
+
+    st.write(
+        "Win percentage at each individual confidence "
+        "level, from highest to lowest."
+    )
+
+    chart_data = confidence_levels[
+        ["confidence", "Win_Pct"]
+    ].copy()
+
+    chart_data["Confidence Level"] = pd.Categorical(
+        chart_data["confidence"].astype(str),
+        categories=[str(i) for i in range(1, 17)],
+        ordered=True,
+    )
+
+    chart_data = chart_data.sort_values("Confidence Level")
+
+    chart_data["Win %"] = (
+        chart_data["Win_Pct"] * 100
+    )
+
+    chart_data = chart_data.set_index(
+        "Confidence Level"
+    )
+
+    st.line_chart(
+        chart_data["Win %"],
+        x_label="Confidence Level",
+        y_label="Win Percentage (%)",
+    )
+
+    st.markdown("#### Weekly Confidence Results")
+
+    player_picks = df[
+        df["player"].str.lower() == selected_player.lower()
+    ].copy()
+
+    def pick_result_symbol(row):
+        if not row["game_completed"]:
+            return " "
+
+        if row["is_tie"]:
+            return "➖"
+
+        if row["pick_correct"] == True:
+            return "✅"
+
+        if row["pick_correct"] == False:
+            return "❌"
+
+        return " "
+
+    player_picks["Result"] = player_picks.apply(
+        pick_result_symbol,
+        axis=1,
+    )
+
+    confidence_matrix = player_picks.pivot_table(
+        index="confidence",
+        columns="week",
+        values="Result",
+        aggfunc="first",
+    )
+
+    confidence_matrix = confidence_matrix.reindex(
+        range(1, 17)
+    )
+
+    confidence_matrix = confidence_matrix.reindex(
+        sorted(df["week"].dropna().unique()),
+        axis=1,
+    )
+
+    confidence_matrix.columns = [
+        f"Week {int(week)}"
+        for week in confidence_matrix.columns
+    ]
+
+    st.dataframe(
+        confidence_matrix.fillna(""),
+        use_container_width=True,
+        hide_index=False,
     )

@@ -403,6 +403,76 @@ def confidence_performance(df):
         ]
     ]
 
+def confidence_level_performance(df):
+    """
+    Analyze each player's performance at every
+    individual confidence level.
+
+    Excludes tied and unfinished games from
+    win/loss records and accuracy.
+    """
+
+    # Include only completed games with a decision.
+    data = completed_results(df)
+
+    data = data[
+        data["pick_correct"].notna()
+    ].copy()
+
+    if data.empty:
+        return pd.DataFrame(
+            columns=[
+                "player",
+                "confidence",
+                "Picks",
+                "Correct",
+                "Incorrect",
+                "Win_Pct",
+                "Confidence_Points",
+                "Points_Possible",
+            ]
+        )
+
+    # Aggregate performance by player and confidence.
+    performance = (
+        data.groupby(["player", "confidence"])
+        .agg(
+            Picks=("pick_correct", "count"),
+            Correct=("pick_correct", "sum"),
+            Confidence_Points=("points_earned", "sum"),
+        )
+        .reset_index()
+    )
+
+    # Calculate losses and accuracy.
+    performance["Incorrect"] = (
+        performance["Picks"] - performance["Correct"]
+    )
+
+    performance["Win_Pct"] = (
+        performance["Correct"] / performance["Picks"]
+    )
+
+    # Maximum possible points from graded picks.
+    performance["Points_Possible"] = (
+        performance["Picks"] * performance["confidence"]
+    )
+
+    return performance[
+        [
+            "player",
+            "confidence",
+            "Picks",
+            "Correct",
+            "Incorrect",
+            "Win_Pct",
+            "Confidence_Points",
+            "Points_Possible",
+        ]
+    ].sort_values(
+        ["player", "confidence"],
+        ascending=[True, False],
+    )
 
 def player_summary(df, player):
     """

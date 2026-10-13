@@ -1,4 +1,7 @@
-from analysis.pickem_analyzer import player_summary
+from analysis.pickem_analyzer import (
+    player_summary,
+    confidence_level_performance,
+)
 
 NFL_DIVISIONS = {
     "AFC East": ["BUF", "MIA", "NE", "NYJ"],
@@ -17,6 +20,10 @@ def get_player_explorer(df, player):
     """
 
     summary = player_summary(df, player)
+
+    confidence_levels = confidence_level_performance(
+        df[df["player"].str.lower() == player.lower()]
+    )
 
     status = summary["status"]
 
@@ -342,6 +349,7 @@ def get_player_explorer(df, player):
         "teams": summary["teams"],
         "opponents": summary["opponents"],
         "confidence": summary["confidence"],
+        "confidence_levels": confidence_levels,
         "highest_confidence_correct": (
             highest_confidence_correct
         ),
