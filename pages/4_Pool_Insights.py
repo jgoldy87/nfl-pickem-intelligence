@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 
 from analysis.pickem_analyzer import (
+    confidence_level_performance,
     pool_game_results,
     lone_wolf_picks,
     lone_wolf_performance,
@@ -849,6 +850,79 @@ with behavior_tab:
 
 with comparison_tab:
 
+    st.subheader("Confidence Level Comparison")
+
+    st.caption(
+        "Compare each player's win percentage at "
+        "individual confidence levels from 1 to 16."
+    )
+
+    confidence_levels = confidence_level_performance(
+        filtered_df
+    )
+
+    if confidence_levels.empty:
+        st.info(
+            "No completed confidence level results yet."
+        )
+
+    else:
+        comparison_chart = confidence_levels.pivot(
+            index="confidence",
+            columns="player",
+            values="Win_Pct",
+        )
+
+        comparison_chart = comparison_chart.reindex(
+            range(1, 17)
+        )
+
+        comparison_chart = comparison_chart * 100
+
+        comparison_chart.index.name = "Confidence Level"
+
+        st.line_chart(
+            comparison_chart,
+            x_label="Confidence Level",
+            y_label="Win Percentage (%)",
+        )
+
+        st.markdown("#### Confidence Level Records")
+
+        # Create a readable record for each player and level.
+        table_data = confidence_levels.copy()
+
+        table_data["Performance"] = (
+            table_data["Correct"].astype(str)
+            + "-"
+            + table_data["Incorrect"].astype(str)
+            + " ("
+            + table_data["Win_Pct"].map(
+                lambda value: f"{value:.1%}"
+            )
+            + ")"
+        )
+
+        # Arrange players as columns and confidence levels as rows.
+        comparison_table = table_data.pivot(
+            index="confidence",
+            columns="player",
+            values="Performance",
+        )
+
+        comparison_table = comparison_table.reindex(
+            range(1, 17)
+        )
+
+        comparison_table.index.name = "Confidence Level"
+
+        st.dataframe(
+            comparison_table.fillna("—"),
+            use_container_width=True,
+        )
+
+    st.divider()
+    
     st.subheader("Player Agreement")
 
 
