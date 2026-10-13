@@ -3,6 +3,7 @@ import pandas as pd
 
 from analysis.pickem_analyzer import (
     confidence_level_performance,
+    confidence_ranking_efficiency,
     pool_game_results,
     lone_wolf_picks,
     lone_wolf_performance,
@@ -919,6 +920,68 @@ with comparison_tab:
         st.dataframe(
             comparison_table.fillna("—"),
             use_container_width=True,
+        )
+
+    st.divider()
+
+    st.subheader("Confidence Ranking Efficiency")
+
+    st.caption(
+        "Measures how effectively players assigned confidence "
+        "points to their correct picks, compared with the "
+        "maximum possible score for those same picks."
+    )
+
+    efficiency_df = confidence_ranking_efficiency(filtered_df)
+
+    if efficiency_df.empty:
+        st.info("No completed weeks available for ranking analysis.")
+
+    else:
+        efficiency_summary = (
+            efficiency_df.groupby("player", as_index=False)
+            .agg(
+                Weeks=("week", "count"),
+                Actual_Points=("Actual_Points", "sum"),
+                Optimal_Points=("Optimal_Points", "sum"),
+                Points_Left=("Points_Left", "sum"),
+            )
+        )
+
+        efficiency_summary["Ranking_Efficiency"] = (
+            efficiency_summary["Actual_Points"]
+            / efficiency_summary["Optimal_Points"].replace(0, float("nan"))
+        )
+
+        efficiency_summary = efficiency_summary.sort_values(
+            "Ranking_Efficiency",
+            ascending=False,
+        )
+
+        st.dataframe(
+            efficiency_summary,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "player": st.column_config.TextColumn("Player"),
+                "Weeks": st.column_config.NumberColumn("Weeks"),
+                "Actual_Points": st.column_config.NumberColumn(
+                    "Actual Points",
+                    format="%d",
+                ),
+                "Optimal_Points": st.column_config.NumberColumn(
+                    "Optimal Points",
+                    format="%d",
+                ),
+                "Points_Left": st.column_config.NumberColumn(
+                    "Points Left",
+                    format="%d",
+                ),
+                "Ranking_Efficiency": st.column_config.NumberColumn(
+                    "Ranking Efficiency",
+                    format="percent",
+                ),
+            },
         )
 
     st.divider()

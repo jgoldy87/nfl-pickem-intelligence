@@ -26,6 +26,11 @@ def home_page():
         "Use the navigation menu to explore the app."
     )
 
+    st.image(
+        "assets/pickem_coffee_mug.png",
+        width=450,
+    )
+
 
 with st.sidebar:
 

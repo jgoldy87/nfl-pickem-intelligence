@@ -474,6 +474,117 @@ def confidence_level_performance(df):
         ascending=[True, False],
     )
 
+def confidence_ranking_efficiency(df):
+    """
+    Calculate how effectively each player assigns
+    confidence points to their picks.
+
+    Only fully completed player-weeks are included.
+    Tied games award zero points and retain their
+    assigned confidence values.
+    """
+
+    columns = [
+        "player",
+        "season",
+        "week",
+        "Correct",
+        "Incorrect",
+        "Ties",
+        "Actual_Points",
+        "Optimal_Points",
+        "Points_Left",
+        "Ranking_Efficiency",
+    ]
+
+    results = []
+
+    for (player, season, week), group in df.groupby(
+        ["player", "season", "week"]
+    ):
+        # Skip weeks with unfinished games.
+        if not group["game_completed"].fillna(False).all():
+            continue
+
+        # Skip weeks with missing confidence values.
+        if group["confidence"].isna().any():
+            continue
+
+        # Only include weeks with a complete, unique
+        # set of confidence values from 1 through N.
+        confidence_values = sorted(
+            group["confidence"].astype(int).tolist()
+        )
+
+        if confidence_values != list(
+            range(1, len(group) + 1)
+        ):
+            continue
+
+        correct_mask = group["pick_correct"].eq(True).fillna(False)
+        incorrect_mask = group["pick_correct"].eq(False).fillna(False)
+
+        correct = int(correct_mask.sum())
+        incorrect = int(incorrect_mask.sum())
+        ties = len(group) - correct - incorrect
+
+        actual_points = int(
+            group["points_earned"].sum()
+        )
+
+        # Tied games keep their confidence values
+        # locked, so exclude those values from
+        # possible reassignment.
+        tied_confidences = set(
+            group.loc[
+                ~(correct_mask | incorrect_mask),
+                "confidence",
+            ].astype(int)
+        )
+
+        available_confidences = sorted(
+            [
+                value
+                for value in confidence_values
+                if value not in tied_confidences
+            ],
+            reverse=True,
+        )
+
+        optimal_points = sum(
+            available_confidences[:correct]
+        )
+
+        points_left = optimal_points - actual_points
+
+        efficiency = (
+            actual_points / optimal_points
+            if optimal_points > 0
+            else None
+        )
+
+        results.append(
+            {
+                "player": player,
+                "season": season,
+                "week": week,
+                "Correct": correct,
+                "Incorrect": incorrect,
+                "Ties": ties,
+                "Actual_Points": actual_points,
+                "Optimal_Points": optimal_points,
+                "Points_Left": points_left,
+                "Ranking_Efficiency": efficiency,
+            }
+        )
+
+    return pd.DataFrame(
+        results,
+        columns=columns,
+    ).sort_values(
+        ["season", "week", "player"]
+    ).reset_index(drop=True)
+
 def player_summary(df, player):
     """
     Return all major analyses for one player.
