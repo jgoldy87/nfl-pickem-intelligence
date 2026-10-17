@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 
 from analysis.pickem_analyzer import (
     confidence_level_performance,
@@ -26,6 +27,11 @@ from analysis.market_performance import (
     summarize_team_type_records,
 )
 
+from analysis.nfl_trends import (
+    get_close_game_results,
+    summarize_close_games,
+    get_margin_distribution,
+)
 
 st.title("Pool Insights")
 
@@ -1246,4 +1252,104 @@ with nfl_trends_tab:
     except Exception as error:
         st.error(
             f"Could not load NFL Trends: {error}"
+        )
+
+    
+    st.divider()
+
+    st.subheader("Close-Game Analysis")
+
+    st.caption(
+        "How competitive have NFL games been "
+        f"during the {selected_season} regular season?"
+    )
+
+    try:
+        close_games = get_close_game_results(
+            selected_season
+        )
+
+        summary = summarize_close_games(
+            close_games
+        )
+
+        if summary["total_games"] == 0:
+            st.info(
+                "No completed regular-season games "
+                "are available yet."
+            )
+
+        else:
+            col1, col2, col3 = st.columns(3)
+
+            col1.metric(
+                "One-Score Games",
+                f"{summary['one_score_pct']:.1f}%",
+            )
+
+            col2.metric(
+                "Decided by 3 or Fewer",
+                f"{summary['field_goal_pct']:.1f}%",
+            )
+
+            col3.metric(
+                "Average Margin",
+                f"{summary['average_margin']:.1f} pts",
+            )
+
+            st.caption(
+                f"Based on {summary['total_games']} "
+                "completed regular-season games."
+            )
+
+            st.markdown(
+                "#### Distribution of Victory Margins"
+            )
+
+            distribution = get_margin_distribution(
+                close_games
+            )
+
+            
+        
+        # Victory margins ordered largest to smallest
+        margin_order = [
+            "15+",
+            "11–14",
+            "8–10",
+            "4–7",
+            "1–3",
+        ]
+
+        chart = (
+            alt.Chart(distribution)
+            .mark_bar()
+            .encode(
+                x=alt.X(
+                    "Games:Q",
+                    title="Number of Games",
+                ),
+                y=alt.Y(
+                    "Margin:N",
+                    title="Victory Margin (Points)",
+                    sort=margin_order,
+                ),
+                tooltip=[
+                    alt.Tooltip("Margin:N", title="Victory Margin"),
+                    alt.Tooltip("Games:Q", title="Games"),
+                ],
+            )
+            .properties(height=300)
+        )
+
+        st.altair_chart(
+            chart,
+            use_container_width=True,
+        )
+
+
+
+    except Exception as error:
+        st.error(
+            f"Could not load Close-Game Analysis: {error}"
         )
