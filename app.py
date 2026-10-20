@@ -106,6 +106,11 @@ pages = [
         title="Pool Insights",
         icon="📊",
     ),
+    st.Page(
+        "pages/6_Team_Rankings.py",
+        title="Team Rankings",
+        icon="📈",
+    ),
 ]
 
 
