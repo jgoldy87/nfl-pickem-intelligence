@@ -1,125 +1,145 @@
 
 import pandas as pd
 
-from analysis.team_data import load_team_games
-from analysis.rankings import get_team_rankings, STAT_CONFIG
+from analysis.market_performance import get_market_performance
+
 
 SEASON = 2026
-THROUGH_WEEK = 5
+THROUGH_WEEK = 6
 
 
-def main():
-    print("Loading team statistics...")
-    team_games = load_team_games(SEASON)
+def analyze_favorite_reliability():
+    results = get_market_performance(season=SEASON)
 
-    data = team_games[
-        (team_games["season"] == SEASON)
-        & (team_games["week"] <= THROUGH_WEEK)
+    games = results[
+        (results["game_type"] == "REG")
+        & (results["week"].between(1, THROUGH_WEEK))
+        & (results["winner"] != "TIE")
+        & (
+            results["away_probability"]
+            != results["home_probability"]
+        )
     ].copy()
 
-    print("\n" + "=" * 65)
-    print("DATA COMPLETENESS")
-    print("=" * 65)
+    if games.empty:
+        print("No completed games with market data found.")
+        return
 
-    print(f"Teams: {data['team'].nunique()}")
-    print(f"Team-game rows: {len(data)}")
-    print(f"Unique games: {data['game_id'].nunique()}")
+    # Each row represents a game in which a team
+    # was favored by the betting market.
+    games["favorite"] = games["market_pick"]
 
-    print("\nTeam-game rows by week:")
-    print(data.groupby("week").size().to_string())
-
-    duplicates = data.duplicated(
-        subset=["game_id", "team"]
-    ).sum()
-
-    print(f"\nDuplicate team-game rows: {duplicates}")
-
-    rankings = get_team_rankings(
-        team_games=team_games,
-        season=SEASON,
-        through_week=THROUGH_WEEK,
+    games["favorite_won"] = (
+        games["market_correct"].astype(int)
     )
 
-    print("\n" + "=" * 65)
-    print("RANKING VERIFICATION")
-    print("=" * 65)
+    games["expected_win"] = (
+        games["market_probability"] / 100
+    )
 
-    print(f"Ranked teams: {len(rankings)}")
-
-    issues = []
-
-    if len(rankings) != 32:
-        issues.append(
-            f"Expected 32 ranked teams, found {len(rankings)}"
+    # Summarize each team's performance as favorite.
+    summary = (
+        games.groupby("favorite")
+        .agg(
+            games_favored=("favorite_won", "size"),
+            wins=("favorite_won", "sum"),
+            avg_probability=("market_probability", "mean"),
+            expected_wins=("expected_win", "sum"),
         )
+        .reset_index()
+    )
 
-    if duplicates:
-        issues.append(
-            f"Found {duplicates} duplicate team-game rows"
-        )
+    summary["losses"] = (
+        summary["games_favored"] - summary["wins"]
+    )
 
-    if data["game_id"].isna().any():
-        issues.append("Missing game IDs")
+    summary["win_pct"] = (
+        summary["wins"] / summary["games_favored"] * 100
+    )
 
-    if data["team"].isna().any():
-        issues.append("Missing team names")
+    summary["actual_minus_expected"] = (
+        summary["wins"] - summary["expected_wins"]
+    )
 
-    for metric, config in STAT_CONFIG.items():
-        ascending = config["better"] == "lower"
+    # Identify each team's most surprising loss.
+    losses = games[games["favorite_won"] == 0]
 
-        expected = rankings[metric].rank(
-            ascending=ascending,
-            method="min",
-        ).astype("Int64")
+    biggest_losses = (
+        losses.groupby("favorite")["market_probability"]
+        .max()
+        .rename("biggest_upset_probability")
+    )
 
-        actual = rankings[f"{metric}_rank"]
+    summary = summary.merge(
+        biggest_losses,
+        on="favorite",
+        how="left",
+    )
 
-        mismatches = (
-            expected.fillna(-1) != actual.fillna(-1)
-        ).sum()
+    summary = summary.round(
+        {
+            "avg_probability": 1,
+            "expected_wins": 2,
+            "win_pct": 1,
+            "actual_minus_expected": 2,
+            "biggest_upset_probability": 1,
+        }
+    )
 
-        missing_values = rankings[metric].isna().sum()
-
-        status = (
-            "PASS"
-            if mismatches == 0 and missing_values == 0
-            else "CHECK"
-        )
-
-        print(
-            f"{metric:<36}"
-            f"{status:<8}"
-            f"mismatches={mismatches}, "
-            f"missing={missing_values}"
-        )
-
-        if mismatches:
-            issues.append(
-                f"{metric}: {mismatches} ranking mismatches"
-            )
-
-        if missing_values:
-            issues.append(
-                f"{metric}: {missing_values} missing values"
-            )
-
-    print("\n" + "=" * 65)
-    print("FINAL RESULT")
-    print("=" * 65)
-
-    if issues:
-        print("ISSUES FOUND:")
-        for issue in issues:
-            print(f"- {issue}")
-    else:
-        print("All automated ranking checks passed.")
+    columns = [
+        "favorite",
+        "games_favored",
+        "wins",
+        "losses",
+        "win_pct",
+        "avg_probability",
+        "expected_wins",
+        "actual_minus_expected",
+        "biggest_upset_probability",
+    ]
 
     print(
-        "\nNote: This verifies ranking calculations "
-        "against the loaded dataset, not against "
-        "an independent external source."
+        f"\nNFL FAVORITE RELIABILITY — "
+        f"{SEASON} THROUGH WEEK {THROUGH_WEEK}"
+    )
+    print("=" * 110)
+
+    print("\nMOST UNDERPERFORMING FAVORITES")
+    print("-" * 110)
+
+    print(
+        summary.sort_values(
+            "actual_minus_expected"
+        )[columns].to_string(index=False)
+    )
+
+    print("\nMOST RELIABLE FAVORITES")
+    print("-" * 110)
+
+    print(
+        summary.sort_values(
+            "actual_minus_expected",
+            ascending=False,
+        )[columns].head(10).to_string(index=False)
+    )
+
+    print("\nLEAGUE SUMMARY")
+    print("-" * 110)
+
+    print(f"Games analyzed: {len(games)}")
+    print(f"Favorite wins: {games['favorite_won'].sum()}")
+    print(f"Favorite losses: {(games['favorite_won'] == 0).sum()}")
+
+    print(
+        "Expected favorite wins: "
+        f"{games['expected_win'].sum():.2f}"
+    )
+
+    print(
+        "Actual minus expected: "
+        f"{games['favorite_won'].sum() - games['expected_win'].sum():+.2f}"
     )
 
 
 if __name__ == "__main__":
-    main()
+    analyze_favorite_reliability()
