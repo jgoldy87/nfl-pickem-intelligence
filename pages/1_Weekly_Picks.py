@@ -30,11 +30,11 @@ def highlight_difference(value):
 st.title("Weekly Picks")
 
 st.image(
-    "assets/zen_skeleton_bonsai.png",
+    "assets/starcatcher_beneath_aurora.png",
     width=400,
 )
 
-st.caption("The art of finding balance in a chaotic NFL season.")
+st.caption("The stars have spoken. They're probably wrong.")
 
 st.write(
     "Build your weekly Pick'em card and "
