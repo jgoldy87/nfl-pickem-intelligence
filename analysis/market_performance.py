@@ -428,3 +428,108 @@ def summarize_team_type_records(results_df):
             record["win_percentage"] = 0.0
 
     return categories
+
+
+def summarize_upset_buckets(results_df):
+    """
+    Summarize NFL underdog victories by the favorite's
+    no-vig implied win probability.
+
+    Excludes tied games and true 50/50 matchups.
+    """
+    columns = [
+        "probability_bucket",
+        "games",
+        "upsets",
+        "expected_upsets",
+        "upset_rate",
+        "expected_upset_rate",
+        "upset_difference",
+    ]
+
+    if results_df.empty:
+        return pd.DataFrame(columns=columns)
+
+    games = results_df.copy()
+
+    # Ties are neither favorite nor underdog victories.
+    games = games[
+        games["winner"].isin(
+            games["away_team"]
+        ) | games["winner"].isin(
+            games["home_team"]
+        )
+    ].copy()
+
+    # A true 50/50 matchup has no favorite.
+    games = games[
+        games["market_probability"] > 50
+    ].copy()
+
+    # Remove rows without usable probabilities.
+    games = games.dropna(
+        subset=["market_probability"]
+    )
+
+    games["upset"] = (
+        games["winner"] != games["market_pick"]
+    ).astype(int)
+
+    games["expected_upset"] = (
+        1 - games["market_probability"] / 100
+    )
+
+    labels = [
+        "50-60%",
+        "60-70%",
+        "70-80%",
+        "80-90%",
+        "90-100%",
+    ]
+
+    games["probability_bucket"] = pd.cut(
+        games["market_probability"],
+        bins=[50, 60, 70, 80, 90, 101],
+        labels=labels,
+        right=False,
+    )
+
+    summary = (
+        games.groupby(
+            "probability_bucket",
+            observed=False,
+        )
+        .agg(
+            games=("upset", "size"),
+            upsets=("upset", "sum"),
+            expected_upsets=("expected_upset", "sum"),
+        )
+        .reset_index()
+    )
+
+    summary["upset_rate"] = (
+        summary["upsets"]
+        / summary["games"].replace(0, float("nan"))
+        * 100
+    ).fillna(0)
+
+    summary["expected_upset_rate"] = (
+        summary["expected_upsets"]
+        / summary["games"].replace(0, float("nan"))
+        * 100
+    ).fillna(0)
+
+    summary["upset_difference"] = (
+        summary["upsets"]
+        - summary["expected_upsets"]
+    )
+
+    for column in [
+        "expected_upsets",
+        "upset_rate",
+        "expected_upset_rate",
+        "upset_difference",
+    ]:
+        summary[column] = summary[column].round(2)
+
+    return summary[columns]

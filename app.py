@@ -111,6 +111,11 @@ pages = [
         title="Team Rankings",
         icon="📈",
     ),
+    st.Page(
+        "pages/7_Upset_Analysis.py",
+        title="Upset Analysis",
+        icon="📉",
+    ),
 ]
 
 
